@@ -1,12 +1,14 @@
 package info.novatec.inspectit.agent.spring;
 
 import info.novatec.inspectit.agent.config.IConfigurationStorage;
+import info.novatec.inspectit.agent.config.impl.JmxSensorTypeConfig;
 import info.novatec.inspectit.agent.config.impl.MethodSensorTypeConfig;
 import info.novatec.inspectit.agent.config.impl.PlatformSensorTypeConfig;
 import info.novatec.inspectit.agent.config.impl.StrategyConfig;
 
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ThreadFactory;
 
 import org.springframework.beans.BeansException;
@@ -81,6 +83,16 @@ public class SpringConfiguration implements BeanDefinitionRegistryPostProcessor 
 		ThreadFactory threadFactory = new ThreadFactoryBuilder().setNameFormat("inspectit-socket-read-executor-service-thread-%d").setDaemon(true).build();
 		return Executors.newFixedThreadPool(1, threadFactory);
 	}
+	
+	/**
+	 * @return Returns coreServiceExecutorService
+	 */
+	@Bean(name = "coreServiceExecutorService")
+	@Scope(BeanDefinition.SCOPE_SINGLETON)
+	public ScheduledExecutorService getScheduledExecutorService() {
+		ThreadFactory threadFactory = new ThreadFactoryBuilder().setNameFormat("inspectit-core-service-executor-service-thread-%d").setDaemon(true).build();
+		return Executors.newScheduledThreadPool(1, threadFactory);
+	}
 
 	/**
 	 * Registers components needed by the configuration to the Spring container.
@@ -107,6 +119,13 @@ public class SpringConfiguration implements BeanDefinitionRegistryPostProcessor 
 		for (PlatformSensorTypeConfig platformSensorTypeConfig : configurationStorage.getPlatformSensorTypes()) {
 			className = platformSensorTypeConfig.getClassName();
 			beanName = "platformSensorType[" + className + "]";
+			registerBeanDefinitionAndInitialize(beanName, className);
+		}
+		
+		// jmx sensor types
+		for (JmxSensorTypeConfig jmxSensorTypeConfig : configurationStorage.getJmxSensorTypes()) {
+			className = jmxSensorTypeConfig.getClassName();
+			beanName = "jmxSensorType[" + className + "]";
 			registerBeanDefinitionAndInitialize(beanName, className);
 		}
 

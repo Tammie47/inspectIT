@@ -2,108 +2,92 @@ package info.novatec.inspectit.cmr.dao.impl;
 
 import java.util.List;
 
-import org.hibernate.SessionFactory;
-import org.hibernate.criterion.DetachedCriteria;
-import org.hibernate.criterion.Restrictions;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.orm.hibernate3.HibernateTemplate;
-import org.springframework.orm.hibernate3.support.HibernateDaoSupport;
+import javax.persistence.TypedQuery;
+
 import org.springframework.stereotype.Repository;
+import org.springframework.transaction.annotation.Transactional;
 
 import info.novatec.inspectit.cmr.dao.UserDao;
 import info.novatec.inspectit.communication.data.cmr.User;
 
 /**
  * The default implementation of the {@link UserDao} interface by using the
- * {@link HibernateDaoSupport} from Spring.
- * <p>
- * Delegates many calls to the {@link HibernateTemplate} returned by the {@link HibernateDaoSupport}
- * class.
+ * Entity Manager.
  * 
  * @author Joshua Hartmann
  * @author Andreas Herzog
  * 
  */
 @Repository
-public class UserDaoImpl extends HibernateDaoSupport implements UserDao {
-
+public class UserDaoImpl extends AbstractJpaDao<User>implements UserDao {
 	/**
-	 * This constructor is used to set the {@link SessionFactory} that is needed by
-	 * {@link HibernateDaoSupport}. In a future version it may be useful to go away from the
-	 * {@link HibernateDaoSupport} and directly use the {@link SessionFactory}. This is described
-	 * here:
-	 * http://blog.springsource.com/2007/06/26/so-should-you-still-use-springs-hibernatetemplate
-	 * -andor-jpatemplate
-	 * 
-	 * @param sessionFactory
-	 *            the hibernate session factory.
+	 * Default constructor.
 	 */
-	@Autowired
-	public UserDaoImpl(SessionFactory sessionFactory) {
-		setSessionFactory(sessionFactory);
+	public UserDaoImpl() {
+		super(User.class);
 	}
 
 	/**
 	 * {@inheritDoc}
 	 */
+	@Override
 	public void delete(User user) {
-		getHibernateTemplate().delete(user);
+		super.delete(user);
 	}
 
 	/**
 	 * {@inheritDoc}
 	 */
+	@Override
 	public void deleteAll(List<User> users) {
-		getHibernateTemplate().deleteAll(users);
+		for (User user : users) {
+			delete(user);
+		}
 	}
 
 	/**
 	 * {@inheritDoc}
 	 */
+	@Override
 	public List<User> loadAll() {
-		return getHibernateTemplate().loadAll(User.class);
+		return getEntityManager().createNamedQuery(User.FIND_ALL, User.class).getResultList();
 	}
 
 	/**
 	 * {@inheritDoc}
 	 */
-	@SuppressWarnings("unchecked")
-	public List<User> findByExample(User user) {
-		return getHibernateTemplate().findByExample(user);
+	@Override
+	public User findByEmail(String email) {
+		TypedQuery<User> query = getEntityManager().createNamedQuery(User.FIND_BY_EMAIL, User.class);
+		query.setParameter("email", email);
+		List<User> results = query.getResultList();
+		if (results.isEmpty()) {
+			return null;
+		}
+		return results.get(0);
 	}
 
 	/**
 	 * {@inheritDoc}
 	 */
-	public User load(String email) {
-		return (User) getHibernateTemplate().get(User.class, email);
-	}
-
-	/**
-	 * {@inheritDoc}
-	 */
+	@Override
+	@Transactional
 	public void saveOrUpdate(User user) {
-		getHibernateTemplate().saveOrUpdate(user);
+		if (user.getId() == null) {
+			super.create(user);
+		} else {
+			super.update(user);
+		}
 	}
 
 	/**
 	 * {@inheritDoc}
 	 */
-	@SuppressWarnings("unchecked")
-	public List<User> findByEmail(String email) {
-		DetachedCriteria criteria = DetachedCriteria.forClass(User.class);
-		criteria.add(Restrictions.eq("email", email));
-		return getHibernateTemplate().findByCriteria(criteria);
-	}
-	
-	/**
-	 * {@inheritDoc}
-	 */
-	@SuppressWarnings("unchecked")
+	@Override
 	public List<User> findByRole(long roleId) {
-		DetachedCriteria criteria = DetachedCriteria.forClass(User.class);
-		criteria.add(Restrictions.eq("roleId", roleId));
-		return getHibernateTemplate().findByCriteria(criteria);
+		TypedQuery<User> query = getEntityManager().createNamedQuery(User.FIND_BY_ROLE_ID, User.class);
+		query.setParameter("roleId", roleId);
+		List<User> results = query.getResultList();
+		return results;
 	}
-
 }

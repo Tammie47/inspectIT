@@ -4,8 +4,6 @@ import info.novatec.inspectit.communication.data.cmr.Permission;
 
 import java.util.List;
 
-import org.springframework.orm.hibernate3.HibernateTemplate;
-
 /**
  * This DAO is used to handle all {@link Permission} objects.
  * 
@@ -14,7 +12,6 @@ import org.springframework.orm.hibernate3.HibernateTemplate;
  * 
  */
 public interface PermissionDao {
-
 	/**
 	 * Load a specific {@link Permission} from the underlying storage by passing the id.
 	 * 
@@ -22,19 +19,7 @@ public interface PermissionDao {
 	 *            The id of the Permission.
 	 * @return The found {@link Permission} object.
 	 */
-	Permission load(long id);
-
-
-	/**
-	 * Execute a findByExample query against the underlying storage.
-	 * 
-	 * @param permission
-	 *            The {@link Permission} object which serves as the example.
-	 * @return The list of {@link Permission} objects which have the same contents as the passed
-	 *         example object.
-	 * @see HibernateTemplate#findByExample(Object)
-	 */
-	List<Permission> findByExample(Permission permission);
+	Permission findById(long id);
 
 	/**
 	 * Saves or updates this {@link Permission} in the underlying storage.
@@ -73,12 +58,4 @@ public interface PermissionDao {
 	 * @return a permission
 	 */
 	Permission findByTitle(String title);
-	
-	/**
-	 * Searches for a Permission in the Database matching the example.
-	 * E.g. when a Permission Object is created, the id field is not set and with this we can get the Permission Object with the corresponding id in the Database.
-	 * @param permission A sample permission
-	 * @return A matching Permission if found, null if not found or multiple entries
-	 */
-	Permission findOneByExample(Permission permission);
 }

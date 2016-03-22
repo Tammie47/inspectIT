@@ -29,15 +29,21 @@ class: info.novatec.inspectit.communication.data.AggregatedHttpTimerData
 20: exclusiveMin
 
 # Http Timer Data
-21: uri
+#21: uri
 22: parameters
 23: attributes
 24: headers
 25: sessionAttributes
-26: requestMethod
+#26: requestMethod
 
 #Aggregated Http Timer Data
 27: aggregatedIds
 
 #Charting
 28: charting
+
+#Http TimerData - INSPECTIT-905
+#29: inspectItTaggingHeaderValue
+
+# HttpInfo - INSPECTIT-1849
+30: httpInfo

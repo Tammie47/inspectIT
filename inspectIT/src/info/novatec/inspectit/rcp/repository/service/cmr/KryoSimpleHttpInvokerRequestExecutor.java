@@ -34,9 +34,9 @@ public class KryoSimpleHttpInvokerRequestExecutor extends SimpleHttpInvokerReque
 	 */
 	@Override
 	protected void writeRemoteInvocation(RemoteInvocation invocation, OutputStream os) throws IOException {
-		try {
+		try (Output output = new Output(os)) {
 			ISerializer serializer = serializationManagerProvider.createSerializer();
-			serializer.serialize(invocation, new Output(os));
+			serializer.serialize(invocation, output);
 		} catch (SerializationException e) {
 			InspectIT.getDefault().createErrorDialog(e.getMessage(), e, -1);
 			throw new IOException(e);
@@ -48,17 +48,16 @@ public class KryoSimpleHttpInvokerRequestExecutor extends SimpleHttpInvokerReque
 	 */
 	@Override
 	protected RemoteInvocationResult readRemoteInvocationResult(InputStream is, String codebaseUrl) throws IOException, ClassNotFoundException {
-		try {
+		try (Input input = new Input(is)) {
 			ISerializer serializer = serializationManagerProvider.createSerializer();
-			Input input = new Input(is);
-			
+
 			Object sessionId = serializer.deserialize(input);
 			if (null != sessionId) {
 				System.setProperty("shiro.session.id", sessionId.toString());
 			} else {
 				System.clearProperty("shiro.session.id");
 			}
-			
+
 			return (RemoteInvocationResult) serializer.deserialize(input);
 		} catch (SerializationException e) {
 			InspectIT.getDefault().createErrorDialog(e.getMessage(), e, -1);

@@ -43,6 +43,6 @@ public class UserDaoTest extends AbstractTransactionalTestNGLogSupport {
 
 		userDao.delete(user);
 
-		assertThat(userDao.load("email"), is(nullValue()));
+		assertThat(userDao.findByEmail("email"), is(nullValue()));
 	}
 }

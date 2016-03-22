@@ -38,14 +38,13 @@ public class SecurityInitialization {
 	 */
 	public void start() {
 		if (permissionDao.loadAll().isEmpty()) {
-
+			//Permission names are used for security checks on client, so change only with great care
 			Permission cmrRecordingPermission = new Permission("cmrRecordingPermission", "Permission to start recording from Agent");
 			Permission cmrShutdownAndRestartPermission = new Permission("cmrShutdownAndRestartPermission", "Permission for shutting down and restarting the CMR");
 			Permission cmrDeleteAgentPermission = new Permission("cmrDeleteAgentPermission", "Permission for deleting an Agent");
 			Permission cmrStoragePermission = new Permission("cmrStoragePermission", "Permission for accessing basic storage options");
 			Permission cmrAdministrationPermission = new Permission("cmrAdministrationPermission", "Permission for accessing the CMR Administration");
 			Permission cmrLookAtAgentsPermission = new Permission("cmrLookAtAgentsPermission", "General permission to look at agents.");
-
 			
 			//Transfers permissions to database.
 			permissionDao.saveOrUpdate(cmrRecordingPermission);
@@ -64,16 +63,16 @@ public class SecurityInitialization {
 			roleDao.saveOrUpdate(guestRole);
 			roleDao.saveOrUpdate(restrictedRole);
 			roleDao.saveOrUpdate(adminRole);
-				
+			
 			//Standarduser - has to be changed on first login
 			User admin = new User(Permutation.hashString("admin"), "admin", adminRole.getId(), false);
 			
 			//Guestuser - can be edited to give a user without an account rights
 			User guest = new User(Permutation.hashString("guest"), "guest", guestRole.getId(), false);
-						
-			//Transfers users to databse.		
+			
+			//Transfers users to database.
 			userDao.saveOrUpdate(guest);
-			userDao.saveOrUpdate(admin);			
-		}		
+			userDao.saveOrUpdate(admin);
+		}
 	}
 }

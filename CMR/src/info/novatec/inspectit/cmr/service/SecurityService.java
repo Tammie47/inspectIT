@@ -26,8 +26,8 @@ import info.novatec.inspectit.communication.data.cmr.User;
 import info.novatec.inspectit.spring.logger.Log;
 
 /**
- * Provides general security-system operations for client<->cmr interaction. Watches over Data
- * Integrity.
+ * Provides general security-system operations for client<->cmr interaction.
+ * Watches over Data Integrity.
  * 
  * @author Andreas Herzog
  * @author Clemens Geibel
@@ -69,7 +69,8 @@ public class SecurityService implements ISecurityService {
 	RoleDao roleDao;
 
 	/**
-	 * Is executed after dependency injection is done to perform any initialization.
+	 * Is executed after dependency injection is done to perform any
+	 * initialization.
 	 */
 	@PostConstruct
 	public void postConstruct() {
@@ -96,11 +97,11 @@ public class SecurityService implements ISecurityService {
 		UsernamePasswordToken token = new UsernamePasswordToken(email, pw);
 
 		Subject currentUser = SecurityUtils.getSubject();
-		
-		if (userDao.load(email).isLocked()) { 
-			return false; 
-			}
-		
+
+		if (userDao.findByEmail(email).isLocked()) {
+			return false;
+		}
+
 		if (!currentUser.isAuthenticated()) {
 			try {
 				currentUser.login(token);
@@ -123,7 +124,7 @@ public class SecurityService implements ISecurityService {
 	public void logout() {
 		SecurityUtils.getSubject().logout();
 	}
-	
+
 	/**
 	 * Returns whether the user is authenticated.
 	 * 
@@ -141,7 +142,7 @@ public class SecurityService implements ISecurityService {
 	@Override
 	public List<Permission> getPermissions() {
 		Subject currentUser = SecurityUtils.getSubject();
-		
+
 		List<Permission> grantedPermissions = new ArrayList<Permission>();
 		List<Permission> existingPermissions = permissionDao.loadAll();
 		for (int i = 0; i < existingPermissions.size(); i++) {
@@ -158,8 +159,8 @@ public class SecurityService implements ISecurityService {
 	// +-------------------------------------------------------------------------------------------+
 
 	/**
-	 * Combines the integrity check for all security data types. Uniqueness etc. is specifically
-	 * checked in every method.
+	 * Combines the integrity check for all security data types. Uniqueness etc.
+	 * is specifically checked in every method.
 	 * 
 	 * @param data
 	 *            data
@@ -173,10 +174,10 @@ public class SecurityService implements ISecurityService {
 			Permission permission = (Permission) data;
 			return (permission.getDescription().length() < 100);
 		} else if (data instanceof Role) {
-			//TODO: make real data integrity tests
+			// TODO: make real data integrity tests
 			return true;
 		}
-		
+
 		return false;
 	}
 
@@ -191,7 +192,7 @@ public class SecurityService implements ISecurityService {
 
 		return userEmails;
 	}
-	
+
 	@Override
 	public List<String> getUsersByRole(long id) {
 		List<User> foundUsers = userDao.findByRole(id);
@@ -208,23 +209,22 @@ public class SecurityService implements ISecurityService {
 		if (!checkDataIntegrity(user)) {
 			throw new DataIntegrityViolationException("Data integrity test failed!");
 		}
-		List<User> sameEmail = userDao.findByEmail(user.getEmail());
-		List<Role> existingRole = roleDao.findByID(user.getRoleId());
-		if (!sameEmail.isEmpty()) {
+		User userWithSameEmail = userDao.findByEmail(user.getEmail());
+		Role existingRole = roleDao.findByID(user.getRoleId());
+		if (userWithSameEmail != null) {
 			throw new DataIntegrityViolationException("User with this email does already exist!");
-		} else if (existingRole.isEmpty()) {
+		} else if (existingRole == null) {
 			throw new DataIntegrityViolationException("Invalid role id assigned to this user!");
 		} else {
 			String hashedPassword = Permutation.hashString(user.getPassword());
 			user.setPassword(hashedPassword);
 			userDao.saveOrUpdate(user);
-					
 		}
 	}
 
 	@Override
 	public User getUser(String email) {
-		return userDao.load(email);
+		return userDao.findByEmail(email);
 	}
 
 	@Override
@@ -237,46 +237,53 @@ public class SecurityService implements ISecurityService {
 		userDao.delete(user);
 	}
 
-	//TODO: TESTMETHODE!
 	@Override
-	public void changeUserAttribute(User userOld, String email, String password, long roleID, boolean passwordChanged, boolean isLocked) {
+	public void changeUserAttribute(User userOld, String email, String password, long roleID, boolean passwordChanged,
+			boolean isLocked) {
 		Subject currentUser = SecurityUtils.getSubject();
 		String currentName = (String) currentUser.getPrincipal();
 		if (currentName.equals(userOld.getEmail())) {
 			currentUser.logout();
 		}
-		if (passwordChanged) {
-			User userNew = new User(password, email, roleID, isLocked);
-			userDao.delete(userOld);
-			addUser(userNew);
-		} else {
-			User userNew = new User(userOld.getPassword(), email, roleID, isLocked);
-			userDao.delete(userOld);
-			userDao.saveOrUpdate(userNew); //this way the old password is not hashed twice.
+
+		if (!email.equals(userOld.getEmail()) && userDao.findByEmail(email) != null) {
+			throw new DataIntegrityViolationException("User with this email does already exist!");
 		}
+		if (roleDao.findByID(roleID) == null) {
+			throw new DataIntegrityViolationException("Invalid role id assigned to this user!");
+		}
+
+		userOld.setEmail(email);
+		userOld.setRoleId(roleID);
+		userOld.setLocked(isLocked);
+		if (passwordChanged) {
+			String hashedPassword = Permutation.hashString(password);
+			userOld.setPassword(hashedPassword);
+		}
+		if (!checkDataIntegrity(userOld)) {
+			throw new DataIntegrityViolationException("Data integrity test failed!");
+		}
+		userDao.saveOrUpdate(userOld);
 	}
 
 	// | PERMISSION |---------
-	
+
 	@Override
 	public void changePermissionDescription(Permission permission) {
-		changePermissionAttributes(permission, permission.getTitle(), permission.getDescription(), permission.getParameter());
+		changePermissionAttributes(permission, permission.getTitle(), permission.getDescription(),
+				permission.getParameter());
 	}
 
 	@Override
-	public void changePermissionParameter(Permission permission) {
-		permissionDao.saveOrUpdate(permission);		
-	}	
-	
-	@Override
-	public void changePermissionAttributes(Permission perm, String newTitle, String newDescription, String newParamter) {
+	public void changePermissionAttributes(Permission perm, String newTitle, String newDescription,
+			String newParamter) {
 		perm.setTitle(newTitle);
 		perm.setDescription(newDescription);
 		perm.setParameter(newParamter);
-		
+
 		permissionDao.saveOrUpdate(perm);
 	}
-	
+
 	@Override
 	public List<Permission> getAllPermissions() {
 		return permissionDao.loadAll();
@@ -285,26 +292,23 @@ public class SecurityService implements ISecurityService {
 	// | ROLE | --------------
 	@Override
 	public Role getRoleByID(long id) throws DataRetrievalFailureException, DataIntegrityViolationException {
-		List<Role> roles = roleDao.findByID(id);
-		if (roles.size() == 1) {
-			return roles.get(0);
-		} else if (roles.isEmpty()) {
+		Role roles = roleDao.findByID(id);
+
+		if (roles == null) {
 			throw new DataRetrievalFailureException("No roles in the database matching the given id!");
 		} else {
-			throw new DataIntegrityViolationException("Multiple roles with the same id in the database!");
+			return roles;
 		}
 	}
 
 	@Override
 	public Role getRoleOfUser(String email) throws AuthenticationException, DataIntegrityViolationException {
-		List<User> foundUsers = userDao.findByEmail(email);
-		if (foundUsers.isEmpty()) {
-			throw new AuthenticationException("Email or password is incorrect.");
-		} else if (foundUsers.size() != 1) {
-			throw new DataIntegrityViolationException("There are multiple users with same email.");
+		User foundUser = userDao.findByEmail(email);
+
+		if (foundUser == null) {
+			throw new DataRetrievalFailureException("No user in the database matching the given email!");
 		} else {
-			User user = foundUsers.get(0);
-			return getRoleByID(user.getRoleId());
+			return getRoleByID(foundUser.getRoleId());
 		}
 	}
 
@@ -314,7 +318,8 @@ public class SecurityService implements ISecurityService {
 	}
 
 	@Override
-	public void addRole(String name, List<String> rolePermissions, String description) throws DataIntegrityViolationException {
+	public void addRole(String name, List<String> rolePermissions, String description)
+			throws DataIntegrityViolationException {
 		List<Permission> allPermissions = getAllPermissions();
 		List<Permission> grantedPermissions = new ArrayList<Permission>();
 		for (int i = 0; i < rolePermissions.size(); i++) {
@@ -325,36 +330,35 @@ public class SecurityService implements ISecurityService {
 				}
 			}
 		}
-		Role role = new Role(name, grantedPermissions, description);		
-			
+		Role role = new Role(name, grantedPermissions, description);
+
 		if (!checkDataIntegrity(role)) {
 			throw new DataIntegrityViolationException("Data integrity test failed!");
 		}
 		List<Role> allRole = roleDao.loadAll();
 		if (allRole.contains(role)) {
 			throw new DataIntegrityViolationException("Role already exist!");
-		} else {			
+		} else {
 			roleDao.saveOrUpdate(role);
 		}
 	}
-	
+
 	@Override
-	public void changeRoleDescription(Role role, String newDescription)	{
+	public void changeRoleDescription(Role role, String newDescription) {
 		changeRoleAttribute(role, role.getTitle(), newDescription, role.getPermissions());
 	}
-	
+
 	@Override
-	public void changeRoleAttribute(Role role, String newTitle, String newDescription, List<Permission> newPermissions) {
+	public void changeRoleAttribute(Role role, String newTitle, String newDescription,
+			List<Permission> newPermissions) {
 		role.setTitle(newTitle);
 		role.setDescription(newDescription);
 		role.setPermissions(newPermissions);
 		roleDao.saveOrUpdate(role);
 	}
-	
+
 	@Override
 	public void deleteRole(Role role) {
 		roleDao.delete(role);
 	}
-
-
 }

@@ -46,10 +46,9 @@ public class KryoHttpInvokerServiceExporter extends HttpInvokerServiceExporter {
 	 */
 	@Override
 	protected RemoteInvocation readRemoteInvocation(HttpServletRequest request, InputStream is) throws IOException, ClassNotFoundException {
-		try {
+		try (Input input = new Input(is)) {
 			ISerializer serializer = serializationManagerProvider.createSerializer();
-			RemoteInvocation remoteInvocation = (RemoteInvocation) serializer.deserialize(new Input(is));
-			return remoteInvocation;
+			return (RemoteInvocation) serializer.deserialize(input);
 		} catch (SerializationException e) {
 			throw new IOException(e);
 		}
@@ -60,15 +59,14 @@ public class KryoHttpInvokerServiceExporter extends HttpInvokerServiceExporter {
 	 */
 	@Override
 	protected void writeRemoteInvocationResult(HttpServletRequest request, HttpServletResponse response, RemoteInvocationResult result, OutputStream os) throws IOException {
-		try {
+		try (Output output = new Output(os)) {
 			if (!result.hasException()) {
 				Object value = result.getValue();
 				result = new RemoteInvocationResult(value);
 			}
 
 			ISerializer serializer = serializationManagerProvider.createSerializer();
-			Output output = new Output(os);
-			
+						
 			// if there is session id write it first, or null if there is not
 			Object sessionId = sessionAwareSecureExecutor.getSessionId();
 			serializer.serialize(sessionId, output);

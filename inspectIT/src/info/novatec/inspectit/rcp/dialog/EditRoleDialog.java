@@ -74,11 +74,11 @@ public class EditRoleDialog extends TitleAreaDialog {
 	/**
 	 * List of permissions that the current user can give to the new role.
 	 */
-	private List<String> grantedPermissionsStrings = new ArrayList<String>(); 
+	private List<String> allPermissionsStrings = new ArrayList<String>(); 
 	/**
 	 * Array of buttons to display the permissions that can be granted.
 	 */
-	private Button[] grantedPermissionsButtons; 
+	private Button[] allPermissionsButtons; 
 	/**
 	 * Default constructor.
 	 * 
@@ -124,30 +124,31 @@ public class EditRoleDialog extends TitleAreaDialog {
 		roleNameBox.setLayoutData(new GridData(SWT.FILL, SWT.CENTER, true, false));
 		roleNameBox.setText(roleOld.getTitle());
 
-		Label textPermissionLabel = new Label(main, SWT.NONE);
-		textPermissionLabel.setLayoutData(new GridData(SWT.BEGINNING, SWT.CENTER, false, false, 2, 5));
-		textPermissionLabel.setText("Mark the permissions, that the new role should have:");
-		List<Permission> permissionList = roleOld.getPermissions();
-		List<Permission> grantedPermissions = cmrRepositoryDefinition.getGrantedPermissions();
-		for (int i = 0; i < grantedPermissions.size(); i++) {
-			this.grantedPermissionsStrings.add(grantedPermissions.get(i).getTitle());
-			}
-		this.grantedPermissionsButtons = new Button[grantedPermissionsStrings.size()];
-		for (int i = 0; i < grantedPermissionsStrings.size(); i++) {
-			grantedPermissionsButtons[i] = new Button(parent, SWT.CHECK);
-			grantedPermissionsButtons[i].setText(grantedPermissionsStrings.get(i));
-			for (Permission perm : permissionList) {
-				if (perm.getTitle().equals(grantedPermissionsStrings.get(i))) { 
-					grantedPermissionsButtons[i].setSelection(true);
-				}
-			}
-		}
-
 		Label roleDescriptionBoxLabel = new Label(main, SWT.NONE);
 		roleDescriptionBoxLabel.setLayoutData(new GridData(SWT.BEGINNING, SWT.CENTER, false, false));
 		roleDescriptionBoxLabel.setText("Description:");
 		roleDescriptionBox = new Text(main, SWT.BORDER);
 		roleDescriptionBox.setLayoutData(new GridData(SWT.FILL, SWT.CENTER, true, false));
+		roleDescriptionBox.setText(roleOld.getDescription());
+		
+		Label textPermissionLabel = new Label(main, SWT.NONE);
+		textPermissionLabel.setLayoutData(new GridData(SWT.BEGINNING, SWT.CENTER, false, false, 2, 5));
+		textPermissionLabel.setText("Mark the permissions, that the new role should have:");
+		List<Permission> permissionList = roleOld.getPermissions();
+		List<Permission> allPermissions = cmrRepositoryDefinition.getSecurityService().getAllPermissions();
+		for (int i = 0; i < allPermissions.size(); i++) {
+			this.allPermissionsStrings.add(allPermissions.get(i).getTitle());
+			}
+		this.allPermissionsButtons = new Button[allPermissionsStrings.size()];
+		for (int i = 0; i < allPermissionsStrings.size(); i++) {
+			allPermissionsButtons[i] = new Button(parent, SWT.CHECK);
+			allPermissionsButtons[i].setText(allPermissionsStrings.get(i));
+			for (Permission perm : permissionList) {
+				if (perm.getTitle().equals(allPermissionsStrings.get(i))) { 
+					allPermissionsButtons[i].setSelection(true);
+				}
+			}
+		}
 		
 		return main;
 	}
@@ -186,7 +187,7 @@ public class EditRoleDialog extends TitleAreaDialog {
 		List<Permission> allPermissions = cmrRepositoryDefinition.getSecurityService().getAllPermissions();
 		List<Permission> newPermissions = new ArrayList<Permission>();
 		List<Permission> rolePermissions = roleOld.getPermissions();
-		for (Button but : grantedPermissionsButtons) {
+		for (Button but : allPermissionsButtons) {
 			if (but.getSelection()) {
 				for (Permission perm : allPermissions) {
 					if (perm.getTitle().equals(but.getText())) {
@@ -218,7 +219,7 @@ public class EditRoleDialog extends TitleAreaDialog {
 				}
 			}
 			if (!stillAdmin && adminRoles.size() < 2) {
-				MessageDialog.openWarning(null, "Warning", "You are about to remove the last admin role. Please make sure there is at least one admin role remaining.");
+				MessageDialog.openWarning(null, "Warning", "This role can not be deleted. Please make sure there is at least one admin role remaining.");
 				return;
 			}
 		}

@@ -10,13 +10,7 @@ import org.eclipse.swt.widgets.Button;
 import org.eclipse.swt.widgets.Composite;
 import org.eclipse.swt.widgets.Control;
 import org.eclipse.swt.widgets.Shell;
-import info.novatec.inspectit.rcp.dialog.ShowAllRolesDialog;
-import info.novatec.inspectit.rcp.dialog.ShowAllUsersDialog;
-import info.novatec.inspectit.rcp.dialog.ShowEditablePermissionsDialog;
 import info.novatec.inspectit.rcp.repository.CmrRepositoryDefinition;
-import info.novatec.inspectit.rcp.dialog.AddRoleDialog;
-import info.novatec.inspectit.rcp.dialog.AddUserDialog;
-import info.novatec.inspectit.rcp.dialog.SearchUsersDialog;
 
 /**
  * Dialog for managing users on the CMR.
@@ -77,10 +71,10 @@ public class CmrAdministrationDialog extends TitleAreaDialog {
 	/**
 	 * Default constructor.
 	 * 
-	 * @param title
-	 *            title for the CMR Administration Page
 	 * @param cmrRepositoryDefinition
 	 *            the CmrRepositoryDefinition
+	 * @param parentShell
+	 * 			the parent shell
 	 */
 	public CmrAdministrationDialog(Shell parentShell, CmrRepositoryDefinition cmrRepositoryDefinition) {
 		super(parentShell);
@@ -178,6 +172,11 @@ public class CmrAdministrationDialog extends TitleAreaDialog {
 		
 		return main;
 	}
+	/**
+	 * Buttons for the button bar. 
+	 * @param parent
+	 * 			Parent in which to create the buttons.
+	 */
 	protected void createButtonsForButtonBar(Composite parent) {
 		closeButton = createButton(parent, CLOSE_ID, "Close", true);
 		closeButton.setEnabled(true);

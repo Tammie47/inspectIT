@@ -7,8 +7,9 @@ import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.not;
 import static org.hamcrest.Matchers.nullValue;
 import static org.mockito.Mockito.when;
+
 import info.novatec.inspectit.agent.AbstractLogSupport;
-import info.novatec.inspectit.communication.data.HttpTimerData;
+import info.novatec.inspectit.communication.data.HttpInfo;
 import info.novatec.inspectit.util.StringConstraint;
 
 import java.util.Collections;
@@ -34,7 +35,7 @@ public class HttpRequestParameterExtractorTest extends AbstractLogSupport {
 	@Mock
 	private HttpServletRequest httpServletRequest;
 
-	@BeforeMethod(dependsOnMethods = { "initMocks" })
+	@BeforeMethod
 	public void initTestClass() {
 		extractor = new HttpRequestParameterExtractor(new StringConstraint(Collections.<String, Object> singletonMap("stringLength", "20")));
 	}
@@ -224,7 +225,7 @@ public class HttpRequestParameterExtractorTest extends AbstractLogSupport {
 	public void readRequestUriNull() {
 		String result = extractor.getRequestUri(httpServletRequest.getClass(), httpServletRequest);
 
-		assertThat(result, is(HttpTimerData.UNDEFINED));
+		assertThat(result, is(HttpInfo.UNDEFINED));
 	}
 
 	@Test
@@ -241,7 +242,7 @@ public class HttpRequestParameterExtractorTest extends AbstractLogSupport {
 	public void readRequestMethodNull() {
 		String result = extractor.getRequestMethod(httpServletRequest.getClass(), httpServletRequest);
 
-		assertThat(result, is(HttpTimerData.UNDEFINED));
+		assertThat(result, is(HttpInfo.UNDEFINED));
 	}
 
 	@Test

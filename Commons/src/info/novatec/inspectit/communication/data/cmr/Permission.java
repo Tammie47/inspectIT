@@ -1,7 +1,15 @@
-
 package info.novatec.inspectit.communication.data.cmr;
 
 import java.io.Serializable;
+
+import javax.persistence.Column;
+import javax.persistence.Entity;
+import javax.persistence.GeneratedValue;
+import javax.persistence.GenerationType;
+import javax.persistence.Id;
+import javax.persistence.NamedQueries;
+import javax.persistence.NamedQuery;
+import javax.persistence.SequenceGenerator;
 /**
  * Storage for a single permission.
  * 
@@ -9,19 +17,45 @@ import java.io.Serializable;
  * @author Andreas Herzog
  * @author Lucca Hellriegel
  */
-public class Permission implements Serializable {
+@Entity
+@NamedQueries({@NamedQuery(name = Permission.FIND_ALL, query = "SELECT p FROM Permission p"),
+	   @NamedQuery(name = Permission.FIND_BY_TITLE, query = "SELECT p FROM Permission p WHERE p.title=:title"),
+	   @NamedQuery(name = Permission.FIND_BY_ID, query = "SELECT p FROM Permission p WHERE p.id=:id") })
+public class Permission implements Comparable<Permission>, Serializable {
 	/**
 	 * Generated UID.
 	 */
-	private static final long serialVersionUID = -5411425549495314822L;
+	private static final long serialVersionUID = -5411425549495314822L;	
+	
+	/**
+	 * Constant for findAll query.
+	 */	
+	public static final String FIND_ALL = "Permission.findAll";
+	
+	/**
+	 * Constant for findByEmail query.
+	 */
+	public static final String FIND_BY_TITLE = "Permission.findByTitle";
+	
+	/**
+	 * Constant for findByEmail query.
+	 */
+	public static final String FIND_BY_ID = "Permission.findById";
+	
 	/**
 	 * The id of the permission, used to identify which functionality it covers, must be unique.
 	 */
-	private long id;
+	@Id
+	@GeneratedValue(strategy = GenerationType.SEQUENCE, generator = "PERMISSION_SEQUENCE")
+	@SequenceGenerator(name = "PERMISSION_SEQUENCE", sequenceName = "PERMISSION_SEQUENCE")
+	private Long id;
+	
 	/**
 	 * A short title for the permission.
 	 */
+	@Column(unique = true, nullable = false)
 	private String title;
+	
 	/**
 	 * A more detailed description for the functionality the permission covers.
 	 */
@@ -49,7 +83,6 @@ public class Permission implements Serializable {
 		this.title = title;
 		this.description = description;
 		this.parameter = "No parameter given";
-		this.id = 0;
 	}
 	
 	/**
@@ -63,7 +96,6 @@ public class Permission implements Serializable {
 		this.title = title;
 		this.description = description;
 		this.parameter = parameter;
-		this.id = 0;
 	}
 	
 	/**
@@ -71,9 +103,10 @@ public class Permission implements Serializable {
 	 *   
 	 * @return {@link #id}  
 	 */
-	public long getId() {
+	public Long getId() {
 		return id;
 	}
+	
 	/**
 	 * Gets {@link #title}.
 	 *   
@@ -82,6 +115,7 @@ public class Permission implements Serializable {
 	public String getTitle() {
 		return title;
 	}
+	
 	/**
 	 * Gets {@link #description}.
 	 *   
@@ -90,6 +124,7 @@ public class Permission implements Serializable {
 	public String getDescription() {
 		return description;
 	}
+	
 	/**
 	 * {@inheritDoc}
 	 */
@@ -107,6 +142,7 @@ public class Permission implements Serializable {
 	public void setTitle(String title) {
 		this.title = title;
 	}
+	
 	/**  
 	 * Sets {@link #id}.  
 	 *   
@@ -116,6 +152,7 @@ public class Permission implements Serializable {
 	public void setId(long id) {
 		this.id = id;
 	}
+	
 	/**  
 	 * Sets {@link #description}.  
 	 *   
@@ -139,7 +176,17 @@ public class Permission implements Serializable {
 	public void setParameter(String parameter) {
 		this.parameter = parameter;
 	}
-
 	
-	
+	/**
+	 * Comparision based on the ID.
+	 * @param o the other permission.
+	 * @return this.getId().compareTo(o.getId())
+	 */
+	public int compareTo(Permission o) {
+		if (getId() == null) {
+			return -1;
+		} else {
+			return getId().compareTo(o.getId());
+		}		
+	}
 }

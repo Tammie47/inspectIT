@@ -1,5 +1,6 @@
 package info.novatec.inspectit.rcp.dialog;
 
+import java.util.Collections;
 import java.util.List;
 
 import org.eclipse.jface.dialogs.TitleAreaDialog;
@@ -142,9 +143,16 @@ public class ShowAllRolesDialog extends TitleAreaDialog {
 			item.setText(0, roles.get(i).getTitle());
 			
 			List<Permission> permissions = roles.get(i).getPermissions();
+			
+			Collections.sort(permissions);
+			
 			String perm = "";
 			for (int k = 0; k < permissions.size(); k++) {
-				perm += permissions.get(k).getTitle() + ", ";
+				perm += permissions.get(k).getTitle();
+				
+				if (k < permissions.size() - 1) {
+					perm += ", ";
+				}
 			}
 			
 			item.setText(1, perm);

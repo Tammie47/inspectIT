@@ -12,11 +12,19 @@ import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyZeroInteractions;
 import static org.mockito.Mockito.when;
+import info.novatec.inspectit.cmr.dao.JmxDefinitionDataIdentDao;
+import info.novatec.inspectit.cmr.dao.MethodIdentDao;
 import info.novatec.inspectit.cmr.dao.MethodIdentToSensorTypeDao;
+import info.novatec.inspectit.cmr.dao.MethodSensorTypeIdentDao;
+import info.novatec.inspectit.cmr.dao.PlatformIdentDao;
+import info.novatec.inspectit.cmr.dao.PlatformSensorTypeIdentDao;
+import info.novatec.inspectit.cmr.dao.impl.JmxSensorTypeIdentDaoImpl;
 import info.novatec.inspectit.cmr.dao.impl.MethodIdentDaoImpl;
 import info.novatec.inspectit.cmr.dao.impl.MethodSensorTypeIdentDaoImpl;
 import info.novatec.inspectit.cmr.dao.impl.PlatformIdentDaoImpl;
 import info.novatec.inspectit.cmr.dao.impl.PlatformSensorTypeIdentDaoImpl;
+import info.novatec.inspectit.cmr.model.JmxDefinitionDataIdent;
+import info.novatec.inspectit.cmr.model.JmxSensorTypeIdent;
 import info.novatec.inspectit.cmr.model.MethodIdent;
 import info.novatec.inspectit.cmr.model.MethodIdentToSensorType;
 import info.novatec.inspectit.cmr.model.MethodSensorTypeIdent;
@@ -26,7 +34,6 @@ import info.novatec.inspectit.cmr.test.AbstractTestNGLogSupport;
 import info.novatec.inspectit.cmr.util.AgentStatusDataProvider;
 import info.novatec.inspectit.exception.BusinessException;
 
-import java.rmi.RemoteException;
 import java.sql.Timestamp;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -63,31 +70,37 @@ public class RegistrationServiceTest extends AbstractTestNGLogSupport {
 	 * Mocked {@link PlatformIdentDaoImpl}.
 	 */
 	@Mock
-	private PlatformIdentDaoImpl platformIdentDao;
+	private PlatformIdentDao platformIdentDao;
 
 	/**
 	 * Mocked {@link MethodIdentDaoImpl}.
 	 */
 	@Mock
-	private MethodIdentDaoImpl methodIdentDao;
+	private MethodIdentDao methodIdentDao;
 
 	/**
 	 * Mocked {@link MethodSensorTypeIdentDaoImpl}.
 	 */
 	@Mock
-	private MethodSensorTypeIdentDaoImpl methodSensorTypeIdentDao;
+	private MethodSensorTypeIdentDao methodSensorTypeIdentDao;
 
 	/**
 	 * Mocked {@link PlatformSensorTypeIdentDaoImpl}.
 	 */
 	@Mock
-	private PlatformSensorTypeIdentDaoImpl platformSensorTypeIdentDao;
+	private PlatformSensorTypeIdentDao platformSensorTypeIdentDao;
 
 	@Mock
 	private AgentStatusDataProvider agentStatusDataProvider;
 
 	@Mock
 	private MethodIdentToSensorTypeDao methodIdentToSensorTypeDao;
+
+	@Mock
+	private JmxSensorTypeIdentDaoImpl jmxSensorTypeIdentDao;
+
+	@Mock
+	private JmxDefinitionDataIdentDao jmxDefinitionDataIdentDao;
 
 	/**
 	 * Initializes mocks. Has to run before each test so that mocks are clear.
@@ -103,6 +116,8 @@ public class RegistrationServiceTest extends AbstractTestNGLogSupport {
 		registrationService.platformSensorTypeIdentDao = platformSensorTypeIdentDao;
 		registrationService.agentStatusDataProvider = agentStatusDataProvider;
 		registrationService.methodIdentToSensorTypeDao = methodIdentToSensorTypeDao;
+		registrationService.jmxSensorTypeIdentDao = jmxSensorTypeIdentDao;
+		registrationService.jmxDefinitionDataIdentDao = jmxDefinitionDataIdentDao;
 		registrationService.log = LoggerFactory.getLogger(RegistrationService.class);
 	}
 
@@ -110,12 +125,10 @@ public class RegistrationServiceTest extends AbstractTestNGLogSupport {
 	 * Tests that an exception will be thrown if the database returns two or more platform idents
 	 * after findByExample search.
 	 * 
-	 * @throws RemoteException
-	 *             If remote exception occurs.
 	 * @throws BusinessException
 	 */
 	@Test(expectedExceptions = { BusinessException.class })
-	public void noRegistrationTwoAgents() throws RemoteException, BusinessException {
+	public void noRegistrationTwoAgents() throws BusinessException {
 		List<String> definedIps = new ArrayList<String>();
 		definedIps.add("ip");
 		String agentName = "agentName";
@@ -124,7 +137,7 @@ public class RegistrationServiceTest extends AbstractTestNGLogSupport {
 		List<PlatformIdent> dbResponseList = new ArrayList<PlatformIdent>();
 		dbResponseList.add(new PlatformIdent());
 		dbResponseList.add(new PlatformIdent());
-		when(platformIdentDao.findByExample((PlatformIdent) anyObject())).thenReturn(dbResponseList);
+		when(platformIdentDao.findByNameAndIps(agentName, definedIps)).thenReturn(dbResponseList);
 
 		registrationService.registerPlatformIdent(definedIps, agentName, version);
 	}
@@ -132,27 +145,24 @@ public class RegistrationServiceTest extends AbstractTestNGLogSupport {
 	/**
 	 * Test that registration will be done properly if the {@link LicenseUtil} validates license.
 	 * 
-	 * @throws LicenseContentException
-	 *             If {@link LicenseContentException} occurs.
-	 * @throws RemoteException
-	 *             If remote exception occurs.
 	 * @throws BusinessException
 	 *             If {@link BusinessException} occurs.
 	 */
 	@Test
-	public void registerNewPlatformIdent() throws RemoteException, BusinessException {
+	public void registerNewPlatformIdent() throws BusinessException {
 		final long platformId = 10;
 		List<String> definedIps = new ArrayList<String>();
 		definedIps.add("ip");
-		String agentName = "agentName";
+		final String agentName = "agentName";
 		String version = "version";
 
-		when(platformIdentDao.findByExample((PlatformIdent) anyObject())).thenReturn(Collections.<PlatformIdent> emptyList());
+		when(platformIdentDao.findByNameAndIps(agentName, definedIps)).thenReturn(Collections.<PlatformIdent> emptyList());
 		Mockito.doAnswer(new Answer<Object>() {
 			@Override
 			public Object answer(InvocationOnMock invocation) throws Throwable {
 				PlatformIdent platformIdent = (PlatformIdent) invocation.getArguments()[0];
 				platformIdent.setId(Long.valueOf(platformId));
+				platformIdent.setAgentName(agentName);
 				return null;
 			}
 		}).when(platformIdentDao).saveOrUpdate((PlatformIdent) anyObject());
@@ -174,15 +184,11 @@ public class RegistrationServiceTest extends AbstractTestNGLogSupport {
 	/**
 	 * Tests that the version and timestamp will be updated if the agent is already registered.
 	 * 
-	 * @throws LicenseContentException
-	 *             If {@link LicenseContentException} occurs.
-	 * @throws RemoteException
-	 *             If remote exception occurs.
 	 * @throws BusinessException
 	 *             If {@link BusinessException} occurs.
 	 */
 	@Test
-	public void registerExistingPlatformIdent() throws RemoteException, BusinessException {
+	public void registerExistingPlatformIdent() throws BusinessException {
 		long platformId = 10;
 		List<String> definedIps = new ArrayList<String>();
 		definedIps.add("ip");
@@ -199,7 +205,7 @@ public class RegistrationServiceTest extends AbstractTestNGLogSupport {
 		List<PlatformIdent> findByExampleList = new ArrayList<PlatformIdent>();
 		findByExampleList.add(platformIdent);
 
-		when(platformIdentDao.findByExample((PlatformIdent) anyObject())).thenReturn(findByExampleList);
+		when(platformIdentDao.findByNameAndIps(agentName, definedIps)).thenReturn(findByExampleList);
 
 		long registeredId = registrationService.registerPlatformIdent(definedIps, agentName, version);
 		assertThat(registeredId, is(equalTo(platformId)));
@@ -217,30 +223,28 @@ public class RegistrationServiceTest extends AbstractTestNGLogSupport {
 	}
 
 	/**
-	 * Test that registration will be done properlly if the {@link LicenseUtil} validates license
-	 * and IP based registration is off.
+	 * Test that registration will be done properly if the {@link LicenseUtil} validates license and
+	 * IP based registration is off.
 	 * 
-	 * @throws LicenseContentException
-	 *             If {@link LicenseContentException} occurs.
-	 * @throws RemoteException
 	 * @throws BusinessException
 	 *             If {@link BusinessException} occurs.
 	 */
 	@Test
-	public void registerNewPlatformIdentNoIpBased() throws RemoteException, BusinessException {
+	public void registerNewPlatformIdentNoIpBased() throws BusinessException {
 		final long platformId = 10;
 		List<String> definedIps = new ArrayList<String>();
 		definedIps.add("ip");
-		String agentName = "agentName";
+		final String agentName = "agentName";
 		String version = "version";
 
 		registrationService.ipBasedAgentRegistration = false;
-		when(platformIdentDao.findByExample((PlatformIdent) anyObject())).thenReturn(Collections.<PlatformIdent> emptyList());
+		when(platformIdentDao.findByName(agentName)).thenReturn(Collections.<PlatformIdent> emptyList());
 		Mockito.doAnswer(new Answer<Object>() {
 			@Override
 			public Object answer(InvocationOnMock invocation) throws Throwable {
 				PlatformIdent platformIdent = (PlatformIdent) invocation.getArguments()[0];
 				platformIdent.setId(Long.valueOf(platformId));
+				platformIdent.setAgentName(agentName);
 				return null;
 			}
 		}).when(platformIdentDao).saveOrUpdate((PlatformIdent) anyObject());
@@ -263,15 +267,11 @@ public class RegistrationServiceTest extends AbstractTestNGLogSupport {
 	 * Tests that the version and timestamp will be updated if the agent is already registered and
 	 * IP registration is off.
 	 * 
-	 * @throws LicenseContentException
-	 *             If {@link LicenseContentException} occurs.
-	 * @throws RemoteException
-	 *             If remote exception occurs.
 	 * @throws BusinessException
 	 *             If {@link BusinessException} occurs.
 	 */
 	@Test
-	public void registerExistingPlatformIdentNoIpBased() throws RemoteException, BusinessException {
+	public void registerExistingPlatformIdentNoIpBased() throws BusinessException {
 		long platformId = 10;
 		List<String> definedIps = new ArrayList<String>();
 		definedIps.add("ip");
@@ -289,7 +289,7 @@ public class RegistrationServiceTest extends AbstractTestNGLogSupport {
 		findByExampleList.add(platformIdent);
 
 		registrationService.ipBasedAgentRegistration = false;
-		when(platformIdentDao.findByExample((PlatformIdent) anyObject())).thenReturn(findByExampleList);
+		when(platformIdentDao.findByName(agentName)).thenReturn(findByExampleList);
 
 		long registeredId = registrationService.registerPlatformIdent(definedIps, agentName, version);
 		assertThat(registeredId, equalTo(platformId));
@@ -323,7 +323,7 @@ public class RegistrationServiceTest extends AbstractTestNGLogSupport {
 		List<PlatformIdent> findByExampleList = new ArrayList<PlatformIdent>();
 		findByExampleList.add(platformIdent);
 
-		when(platformIdentDao.findByExample((PlatformIdent) anyObject())).thenReturn(findByExampleList);
+		when(platformIdentDao.findByNameAndIps(agentName, definedIps)).thenReturn(findByExampleList);
 
 		registrationService.unregisterPlatformIdent(definedIps, agentName);
 
@@ -339,19 +339,16 @@ public class RegistrationServiceTest extends AbstractTestNGLogSupport {
 		definedIps.add("ip");
 		String agentName = "agentName";
 
-		when(platformIdentDao.findByExample((PlatformIdent) anyObject())).thenReturn(Collections.<PlatformIdent> emptyList());
+		when(platformIdentDao.findByNameAndIps(agentName, definedIps)).thenReturn(Collections.<PlatformIdent> emptyList());
 
 		registrationService.unregisterPlatformIdent(definedIps, agentName);
 	}
 
 	/**
 	 * Tests registration of the new {@link MethodIdent}.
-	 * 
-	 * @throws RemoteException
-	 *             If {@link RemoteException} occurs.
 	 */
 	@Test
-	public void registerNewMethodIdent() throws RemoteException {
+	public void registerNewMethodIdent() {
 		final long methodId = 20;
 		long platformId = 1;
 		String packageName = "package";
@@ -364,7 +361,7 @@ public class RegistrationServiceTest extends AbstractTestNGLogSupport {
 
 		PlatformIdent platformIdent = new PlatformIdent();
 		when(platformIdentDao.load(platformId)).thenReturn(platformIdent);
-		when(methodIdentDao.findForPlatformIdent(eq(platformId), (MethodIdent) anyObject())).thenReturn(Collections.<MethodIdent> emptyList());
+		when(methodIdentDao.findForPlatformIdAndExample(eq(platformId), (MethodIdent) anyObject())).thenReturn(Collections.<MethodIdent> emptyList());
 		Mockito.doAnswer(new Answer<Object>() {
 			@Override
 			public Object answer(InvocationOnMock invocation) throws Throwable {
@@ -392,12 +389,9 @@ public class RegistrationServiceTest extends AbstractTestNGLogSupport {
 
 	/**
 	 * Tests registration of the existing {@link MethodIdent}.
-	 * 
-	 * @throws RemoteException
-	 *             If {@link RemoteException} occurs.
 	 */
 	@Test
-	public void registerExistnigMethodIdent() throws RemoteException {
+	public void registerExistnigMethodIdent() {
 		final long methodId = 20;
 		long platformId = 1;
 		String packageName = "package";
@@ -425,7 +419,7 @@ public class RegistrationServiceTest extends AbstractTestNGLogSupport {
 		PlatformIdent platformIdent = new PlatformIdent();
 		methodIdent.setPlatformIdent(platformIdent);
 		when(platformIdentDao.load(platformId)).thenReturn(platformIdent);
-		when(methodIdentDao.findForPlatformIdent(eq(platformId), (MethodIdent) anyObject())).thenReturn(findByExampleList);
+		when(methodIdentDao.findForPlatformIdAndExample(eq(platformId), (MethodIdent) anyObject())).thenReturn(findByExampleList);
 
 		long registeredId = registrationService.registerMethodIdent(platformId, packageName, className, methodName, parameterTypes, returnType, modifiers);
 		assertThat(registeredId, equalTo(methodId));
@@ -446,24 +440,22 @@ public class RegistrationServiceTest extends AbstractTestNGLogSupport {
 
 	/**
 	 * Test the registration of the method sensor type.
-	 * 
-	 * @throws RemoteException
-	 *             If {@link RemoteException} occurs.
 	 */
 	@Test
-	public void registerMethodSensorType() throws RemoteException {
+	public void registerMethodSensorType() {
 		final long methodSensorId = 30;
 		long platformId = 1;
-		String fqcName = "class";
+		final String fqcName = "class";
 
 		PlatformIdent platformIdent = new PlatformIdent();
 		when(platformIdentDao.load(platformId)).thenReturn(platformIdent);
-		when(methodSensorTypeIdentDao.findByExample(eq(platformId), (MethodSensorTypeIdent) anyObject())).thenReturn(Collections.<MethodSensorTypeIdent> emptyList());
+		when(methodSensorTypeIdentDao.findByClassNameAndPlatformId(fqcName, platformId)).thenReturn(Collections.<MethodSensorTypeIdent> emptyList());
 		Mockito.doAnswer(new Answer<Object>() {
 			@Override
 			public Object answer(InvocationOnMock invocation) throws Throwable {
 				MethodSensorTypeIdent methodSensorIdent = (MethodSensorTypeIdent) invocation.getArguments()[0];
 				methodSensorIdent.setId(Long.valueOf(methodSensorId));
+				methodSensorIdent.setFullyQualifiedClassName(fqcName);
 				return null;
 			}
 		}).when(methodSensorTypeIdentDao).saveOrUpdate((MethodSensorTypeIdent) anyObject());
@@ -482,16 +474,13 @@ public class RegistrationServiceTest extends AbstractTestNGLogSupport {
 	/**
 	 * Test that the registration of the {@link MethodSensorTypeIdent} will be correct if properties
 	 * are provided.
-	 * 
-	 * @throws RemoteException
-	 *             If {@link RemoteException} occurs.
 	 */
 	@SuppressWarnings("unchecked")
 	@Test
-	public void registerMethodSensorTypeWithSettings() throws RemoteException {
+	public void registerMethodSensorTypeWithSettings() {
 		final long methodSensorId = 30;
 		long platformId = 1;
-		String fqcName = "class";
+		final String fqcName = "class";
 		String regEx = "myRegEx";
 		String regExTemplate = "myRegExTemplate";
 
@@ -499,12 +488,13 @@ public class RegistrationServiceTest extends AbstractTestNGLogSupport {
 
 		PlatformIdent platformIdent = new PlatformIdent();
 		when(platformIdentDao.load(platformId)).thenReturn(platformIdent);
-		when(methodSensorTypeIdentDao.findByExample(eq(platformId), (MethodSensorTypeIdent) anyObject())).thenReturn(Collections.<MethodSensorTypeIdent> emptyList());
+		when(methodSensorTypeIdentDao.findByClassNameAndPlatformId(fqcName, platformId)).thenReturn(Collections.<MethodSensorTypeIdent> emptyList());
 		Mockito.doAnswer(new Answer<Object>() {
 			@Override
 			public Object answer(InvocationOnMock invocation) throws Throwable {
 				MethodSensorTypeIdent methodSensorIdent = (MethodSensorTypeIdent) invocation.getArguments()[0];
 				methodSensorIdent.setId(Long.valueOf(methodSensorId));
+				methodSensorIdent.setFullyQualifiedClassName(fqcName);
 				return null;
 			}
 		}).when(methodSensorTypeIdentDao).saveOrUpdate((MethodSensorTypeIdent) anyObject());
@@ -519,24 +509,22 @@ public class RegistrationServiceTest extends AbstractTestNGLogSupport {
 
 	/**
 	 * Test the registration of the platform sensor type.
-	 * 
-	 * @throws RemoteException
-	 *             If {@link RemoteException} occurs.
 	 */
 	@Test
-	public void registerPlatformSensorType() throws RemoteException {
+	public void registerPlatformSensorType() {
 		final long platformSensorId = 20;
 		long platformId = 1;
-		String fqcName = "class";
+		final String fqcName = "class";
 
 		PlatformIdent platformIdent = new PlatformIdent();
 		when(platformIdentDao.load(platformId)).thenReturn(platformIdent);
-		when(platformSensorTypeIdentDao.findByExample(eq(platformId), (PlatformSensorTypeIdent) anyObject())).thenReturn(Collections.<PlatformSensorTypeIdent> emptyList());
+		when(platformSensorTypeIdentDao.findByClassNameAndPlatformId(fqcName, platformId)).thenReturn(Collections.<PlatformSensorTypeIdent> emptyList());
 		Mockito.doAnswer(new Answer<Object>() {
 			@Override
 			public Object answer(InvocationOnMock invocation) throws Throwable {
 				PlatformSensorTypeIdent platformSensorTypeIdent = (PlatformSensorTypeIdent) invocation.getArguments()[0];
 				platformSensorTypeIdent.setId(Long.valueOf(platformSensorId));
+				platformSensorTypeIdent.setFullyQualifiedClassName(fqcName);
 				return null;
 			}
 		}).when(platformSensorTypeIdentDao).saveOrUpdate((PlatformSensorTypeIdent) anyObject());
@@ -553,13 +541,93 @@ public class RegistrationServiceTest extends AbstractTestNGLogSupport {
 	}
 
 	/**
-	 * Test the registering of the method sensor type to method occurring for the first time.
+	 * Test the registration of the JMX sensor type ident.
 	 * 
 	 * @throws RemoteException
 	 *             If {@link RemoteException} occurs.
 	 */
 	@Test
-	public void registerSensorTypeWithMethodFirstTime() throws RemoteException {
+	public void registerJmxSensorTypeIdent() {
+		final long jmxSensorId = 50;
+		long platformId = 1;
+		String fqcName = "class";
+
+		PlatformIdent platformIdent = new PlatformIdent();
+		when(platformIdentDao.load(platformId)).thenReturn(platformIdent);
+		when(jmxSensorTypeIdentDao.findByExample(eq(platformId), (JmxSensorTypeIdent) anyObject())).thenReturn(Collections.<JmxSensorTypeIdent> emptyList());
+		Mockito.doAnswer(new Answer<Object>() {
+			@Override
+			public Object answer(InvocationOnMock invocation) throws Throwable {
+				JmxSensorTypeIdent jmxSensorTypeIdent = (JmxSensorTypeIdent) invocation.getArguments()[0];
+				jmxSensorTypeIdent.setId(Long.valueOf(jmxSensorId));
+				return null;
+			}
+		}).when(jmxSensorTypeIdentDao).saveOrUpdate((JmxSensorTypeIdent) anyObject());
+
+		long registeredId = registrationService.registerJmxSensorTypeIdent(platformId, fqcName);
+		assertThat(registeredId, is(equalTo(jmxSensorId)));
+
+		ArgumentCaptor<JmxSensorTypeIdent> jmxSensorArgument = ArgumentCaptor.forClass(JmxSensorTypeIdent.class);
+		verify(jmxSensorTypeIdentDao, times(1)).saveOrUpdate(jmxSensorArgument.capture());
+		assertThat(jmxSensorArgument.getValue().getFullyQualifiedClassName(), is(equalTo(fqcName)));
+
+		verify(platformIdentDao, times(1)).saveOrUpdate(platformIdent);
+		assertThat(jmxSensorArgument.getValue(), is(equalTo(platformIdent.getSensorTypeIdents().toArray()[0])));
+	}
+
+	/**
+	 * Tests the registration of a {@link JmxSensorTypeIdent}.
+	 * 
+	 * @throws RemoteException
+	 *             If {@link RemoteException} occurs.
+	 */
+	@Test
+	public void registerJmxSensorDefinitionDataIdent() {
+		final long jmxSensorId = 50;
+		long platformId = 1;
+		String mBeanObjectName = "mBeanObjectName";
+		String mBeanAttributeName = "mBeanAttributeName";
+		String mBeanAttributeDescription = "mBeanAttributeDescription";
+		String mBeanAttributeType = "mBeanAttributeType";
+		boolean isIs = true;
+		boolean isReadable = true;
+		boolean isWritable = true;
+
+		final PlatformIdent platformIdent = new PlatformIdent();
+		when(platformIdentDao.load(platformId)).thenReturn(platformIdent);
+		when(jmxDefinitionDataIdentDao.findForPlatformIdent(eq(platformId), (JmxDefinitionDataIdent) anyObject())).thenReturn(Collections.<JmxDefinitionDataIdent> emptyList());
+		Mockito.doAnswer(new Answer<Object>() {
+			@Override
+			public Object answer(InvocationOnMock invocation) throws Throwable {
+				JmxDefinitionDataIdent jmxSensorTypeIdent = (JmxDefinitionDataIdent) invocation.getArguments()[0];
+				jmxSensorTypeIdent.setId(Long.valueOf(jmxSensorId));
+				return null;
+			}
+		}).when(jmxDefinitionDataIdentDao).saveOrUpdate((JmxDefinitionDataIdent) anyObject());
+
+		long registeredId = registrationService.registerJmxSensorDefinitionDataIdent(platformId, mBeanObjectName, mBeanAttributeName, mBeanAttributeDescription, mBeanAttributeType, isIs, isReadable,
+				isWritable);
+		assertThat(registeredId, is(equalTo(jmxSensorId)));
+
+		ArgumentCaptor<JmxDefinitionDataIdent> jmxSensorArgument = ArgumentCaptor.forClass(JmxDefinitionDataIdent.class);
+		verify(jmxDefinitionDataIdentDao, times(1)).saveOrUpdate(jmxSensorArgument.capture());
+
+		JmxDefinitionDataIdent dataIdent = jmxSensorArgument.getValue();
+
+		assertThat(dataIdent.getmBeanObjectName(), is(equalTo(mBeanObjectName)));
+		assertThat(dataIdent.getmBeanAttributeName(), is(equalTo(mBeanAttributeName)));
+		assertThat(dataIdent.getmBeanAttributeDescription(), is(equalTo(mBeanAttributeDescription)));
+		assertThat(dataIdent.getmBeanAttributeType(), is(equalTo(mBeanAttributeType)));
+		assertThat(dataIdent.getmBeanAttributeIsIs(), is(equalTo(isIs)));
+		assertThat(dataIdent.getmBeanAttributeIsReadable(), is(equalTo(isReadable)));
+		assertThat(dataIdent.getmBeanAttributeIsWritable(), is(equalTo(isWritable)));
+	}
+
+	/**
+	 * Test the registering of the method sensor type to method occurring for the first time.
+	 */
+	@Test
+	public void registerSensorTypeWithMethodFirstTime() {
 		long methodId = 20;
 		long methodSensorId = 50;
 
@@ -581,12 +649,9 @@ public class RegistrationServiceTest extends AbstractTestNGLogSupport {
 
 	/**
 	 * Test the registering of the method sensor type to method occurring not for the first time.
-	 * 
-	 * @throws RemoteException
-	 *             If {@link RemoteException} occurs.
 	 */
 	@Test
-	public void registerSensorTypeWithMethodSecondTime() throws RemoteException {
+	public void registerSensorTypeWithMethodSecondTime() {
 		long methodId = 20;
 		long methodSensorId = 50;
 

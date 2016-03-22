@@ -2,11 +2,14 @@ package info.novatec.inspectit.rcp.handlers;
 
 import info.novatec.inspectit.exception.BusinessException;
 import info.novatec.inspectit.rcp.InspectIT;
-import info.novatec.inspectit.rcp.dialog.EditRepositoryDataDialog;
+import info.novatec.inspectit.rcp.dialog.EditNameDescriptionDialog;
 import info.novatec.inspectit.rcp.provider.IStorageDataProvider;
 import info.novatec.inspectit.rcp.repository.CmrRepositoryDefinition;
 import info.novatec.inspectit.rcp.repository.CmrRepositoryDefinition.OnlineStatus;
 import info.novatec.inspectit.storage.StorageData;
+import info.novatec.inspectit.storage.serializer.SerializationException;
+
+import java.io.IOException;
 
 import org.eclipse.core.commands.AbstractHandler;
 import org.eclipse.core.commands.ExecutionEvent;
@@ -37,9 +40,9 @@ public class EditStorageDataHandler extends AbstractHandler implements IHandler 
 		}
 
 		StorageData storageData = storageDataProvider.getStorageData();
-		EditRepositoryDataDialog editStorageDataDialog = new EditRepositoryDataDialog(HandlerUtil.getActiveShell(event), storageData.getName(), storageData.getDescription());
+		EditNameDescriptionDialog editStorageDataDialog = new EditNameDescriptionDialog(HandlerUtil.getActiveShell(event), storageData.getName(), storageData.getDescription());
 		editStorageDataDialog.open();
-		if (editStorageDataDialog.getReturnCode() == EditRepositoryDataDialog.OK) {
+		if (editStorageDataDialog.getReturnCode() == EditNameDescriptionDialog.OK) {
 			CmrRepositoryDefinition cmrRepositoryDefinition = storageDataProvider.getCmrRepositoryDefinition();
 			if (cmrRepositoryDefinition.getOnlineStatus() != OnlineStatus.OFFLINE) {
 				try {
@@ -48,11 +51,11 @@ public class EditStorageDataHandler extends AbstractHandler implements IHandler 
 					cmrRepositoryDefinition.getStorageService().updateStorageData(storageData);
 					try {
 						InspectIT.getDefault().getInspectITStorageManager().storageRemotelyUpdated(storageData);
-					} catch (Exception e) {
-						InspectIT.getDefault().createErrorDialog("Storage data update failed.", e, -1);
+					} catch (SerializationException | IOException e) {
+						throw new ExecutionException("Storage data update failed.", e);
 					}
 				} catch (BusinessException e) {
-					InspectIT.getDefault().createErrorDialog("Storage data update failed.", e, -1);
+					throw new ExecutionException("Storage data update failed.", e);
 				}
 			} else {
 				InspectIT.getDefault().createInfoDialog("Storage data can not be updated, because the underlying repository is currently offline.", -1);

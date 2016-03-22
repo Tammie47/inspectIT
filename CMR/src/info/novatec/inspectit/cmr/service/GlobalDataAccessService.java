@@ -25,12 +25,14 @@ import javax.annotation.PostConstruct;
 import org.slf4j.Logger;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 /**
  * @author Patrice Bouillet
  * 
  */
 @Service
+@Transactional
 public class GlobalDataAccessService implements IGlobalDataAccessService {
 
 	/** The logger of this class. */
@@ -95,7 +97,7 @@ public class GlobalDataAccessService implements IGlobalDataAccessService {
 
 			// delete is allowed only if agent is disconnected or was never connected
 			if (null != agentStatusData && agentStatusData.getAgentConnection() == AgentConnection.CONNECTED) {
-				throw new BusinessException("Delete the agent '" + platformIdent.getAgentName() + "'.", AgentManagementErrorCodeEnum.AGENT_DOES_NOT_EXIST);
+				throw new BusinessException("Delete the agent '" + platformIdent.getAgentName() + "'.", AgentManagementErrorCodeEnum.AGENT_CAN_NOT_BE_DELETED);
 			}
 
 			platformIdentDao.delete(platformIdent);

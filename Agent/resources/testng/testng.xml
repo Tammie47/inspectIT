@@ -14,6 +14,11 @@
 			<class name="info.novatec.inspectit.agent.config.impl.FileConfigurationReaderTest" />
 		</classes>
 	</test>
+	<test name="Connection">
+		<classes>
+			<class name="info.novatec.inspectit.agent.connection.impl.KryoNetConnectionTest" />
+		</classes>
+	</test>
 	<test name="Core">
 		<classes>
 			<class name="info.novatec.inspectit.agent.core.impl.CoreServiceTest" />
@@ -47,13 +52,13 @@
 			<class name="info.novatec.inspectit.agent.sensor.method.http.HttpHookTest" />
 			<class name="info.novatec.inspectit.agent.sensor.method.invocationsequence.InvocationSequenceHookTest" />
 			<class name="info.novatec.inspectit.agent.sensor.method.timer.TimerHookTest" />
+			<class name="info.novatec.inspectit.agent.sensor.method.logging.Log4JLoggingHookTest" />
 		</classes>
 	</test>
 	<test name="Connection Meta Data Extraction">
 		<classes>
 			<class name="info.novatec.inspectit.agent.sensor.method.jdbc.JDBCUrlExtractorTest" />
 			<class name="info.novatec.inspectit.agent.sensor.method.jdbc.ConnectionMetaDataExtractorTest" />
-			<class name="info.novatec.inspectit.agent.sensor.method.jdbc.ConnectionMetaDataHookTest" />
 			<class name="info.novatec.inspectit.agent.sensor.method.jdbc.ConnectionMetaDataStorageTest" />
 		</classes>
 	</test>
@@ -67,6 +72,7 @@
 			<class name="info.novatec.inspectit.agent.sensor.platform.RuntimeInformationTest" />
 			<class name="info.novatec.inspectit.agent.sensor.platform.SystemInformationTest" />
 			<class name="info.novatec.inspectit.agent.sensor.platform.ThreadInformationTest" />
+			<class name="info.novatec.inspectit.agent.sensor.jmx.JmxSensorTest" />
 		</classes>
 	</test>
 		<test name="Sending Strategies">

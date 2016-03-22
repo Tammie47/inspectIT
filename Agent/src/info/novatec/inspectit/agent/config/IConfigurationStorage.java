@@ -2,13 +2,16 @@ package info.novatec.inspectit.agent.config;
 
 import info.novatec.inspectit.agent.analyzer.IMatchPattern;
 import info.novatec.inspectit.agent.analyzer.IMatcher;
+import info.novatec.inspectit.agent.config.impl.JmxSensorTypeConfig;
 import info.novatec.inspectit.agent.config.impl.MethodSensorTypeConfig;
 import info.novatec.inspectit.agent.config.impl.PlatformSensorTypeConfig;
 import info.novatec.inspectit.agent.config.impl.RepositoryConfig;
 import info.novatec.inspectit.agent.config.impl.StrategyConfig;
+import info.novatec.inspectit.agent.config.impl.UnregisteredJmxConfig;
 import info.novatec.inspectit.agent.config.impl.UnregisteredSensorConfig;
 import info.novatec.inspectit.agent.sensor.exception.IExceptionSensor;
 
+import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 
@@ -17,6 +20,7 @@ import java.util.Map;
  * 
  * @author Patrice Bouillet
  * @author Eduard Tudenhoefner
+ * @author Alfred Krauss
  * 
  */
 public interface IConfigurationStorage {
@@ -136,6 +140,44 @@ public interface IConfigurationStorage {
 	List<MethodSensorTypeConfig> getExceptionSensorTypes();
 
 	/**
+	 * Creates and initializes a {@link JmxSensorTypeConfig} out of the given parameters. A sensor
+	 * type is always unique, hence only one instance exists which is used by all installed sensors
+	 * in the target application.
+	 * 
+	 * @param sensorTypeClass
+	 *            the fully qualified definition of the sensor type which is instantiated via
+	 *            reflection.
+	 * @param sensorName
+	 *            the user given name of the sensor.
+	 * @throws StorageException
+	 *             This exception is thrown if something unexpected happens while initializing the
+	 *             buffer strategy.
+	 */
+	void addJmxSensorType(String sensorTypeClass, String sensorName) throws StorageException;
+
+	/**
+	 * Returns a {@link List} of the {@link JmxSensorTypeConfig} classes.
+	 * 
+	 * @return A {@link List} of {@link JmxSensorTypeConfig} classes.
+	 */
+	List<JmxSensorTypeConfig> getJmxSensorTypes();
+
+	/**
+	 * Adds a configuration for a jmx sensor.
+	 * 
+	 * @param jmxSensorTypeName
+	 *            Name of the JMX-Sensor
+	 * @param mBeanName
+	 *            Name of the MBean
+	 * @param attributeName
+	 *            Name of the Attribute
+	 * @throws StorageException
+	 *             This exception is thrown if something unexpected happens while initializing the
+	 *             buffer strategy.
+	 */
+	void addUnregisteredJmxConfig(String jmxSensorTypeName, String mBeanName, String attributeName) throws StorageException;
+
+	/**
 	 * Creates and initializes a {@link MethodSensorTypeConfig} out of the given parameters. A
 	 * sensor type is always unique, hence only one instance exists which is used by all installed
 	 * sensors in the target application.
@@ -229,6 +271,13 @@ public interface IConfigurationStorage {
 	List<UnregisteredSensorConfig> getUnregisteredSensorConfigs();
 
 	/**
+	 * Returns a {@link List} of the {@link UnregisteredJmxConfig} classes.
+	 * 
+	 * @return A {@link List} of {@link UnregisteredJmxConfig} classes.
+	 */
+	List<UnregisteredJmxConfig> getUnregisteredJmxConfigs();
+
+	/**
 	 * Returns whether the {@link IExceptionSensor} is activated.
 	 * 
 	 * @return Whether the {@link IExceptionSensor} is activated.
@@ -266,12 +315,13 @@ public interface IConfigurationStorage {
 	void addIgnoreClassesPattern(String patternString);
 
 	/**
-	 * Returns the matcher that can be used to test if the ClassLoader class should be instrumented
+	 * Returns the matchers that can be used to test if the ClassLoader class should be instrumented
 	 * in the way that class loading is delegated if the class to be loaded is inspectIT class.
 	 * 
-	 * @return Returns the matcher that can be used to test if the ClassLoader class should be
+	 * @return Returns the matchers that can be used to test if the ClassLoader class should be
 	 *         instrumented in the way that class loading is delegated if the class to be loaded is
 	 *         inspectIT class.
 	 */
-	IMatcher getClassLoaderDelegationMatcher();
+	Collection<IMatcher> getClassLoaderDelegationMatchers();
+
 }

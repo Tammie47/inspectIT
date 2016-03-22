@@ -2,127 +2,86 @@ package info.novatec.inspectit.cmr.dao.impl;
 
 import java.util.List;
 
-import org.hibernate.SessionFactory;
-import org.hibernate.criterion.DetachedCriteria;
-import org.hibernate.criterion.Restrictions;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.orm.hibernate3.HibernateTemplate;
-import org.springframework.orm.hibernate3.support.HibernateDaoSupport;
+import javax.persistence.TypedQuery;
 import org.springframework.stereotype.Repository;
+import org.springframework.transaction.annotation.Transactional;
 
 import info.novatec.inspectit.cmr.dao.PermissionDao;
 import info.novatec.inspectit.communication.data.cmr.Permission;
 
 /**
- * The default implementation of the {@link PermissionDao} interface by using the
- * {@link HibernateDaoSupport} from Spring.
- * <p>
- * Delegates many calls to the {@link HibernateTemplate} returned by the {@link HibernateDaoSupport}
- * class.
- * 
+ * The default implementation of the {@link PermissionDao} interface by using the Entity Manager.
  * @author Joshua Hartmann
  * @author Andreas Herzog
  * 
  */
 @Repository
-public class PermissionDaoImpl extends HibernateDaoSupport implements PermissionDao {
-
+public class PermissionDaoImpl extends AbstractJpaDao<Permission>  implements PermissionDao {	
 	/**
-	 * This constructor is used to set the {@link SessionFactory} that is needed by
-	 * {@link HibernateDaoSupport}. In a future version it may be useful to go away from the
-	 * {@link HibernateDaoSupport} and directly use the {@link SessionFactory}. This is described
-	 * here:
-	 * http://blog.springsource.com/2007/06/26/so-should-you-still-use-springs-hibernatetemplate
-	 * -andor-jpatemplate
-	 * 
-	 * @param sessionFactory
-	 *            the hibernate session factory.
+	 * Default constructor.
 	 */
-	@Autowired
-	public PermissionDaoImpl(SessionFactory sessionFactory) {
-		setSessionFactory(sessionFactory);
+	public PermissionDaoImpl() {
+		super(Permission.class);
 	}
 
 	/**
 	 * {@inheritDoc}
 	 */
+	@Override
 	public void delete(Permission permission) {
-		getHibernateTemplate().delete(permission);
+		super.delete(permission);
 	}
 
 	/**
 	 * {@inheritDoc}
 	 */
+	@Override
 	public void deleteAll(List<Permission> permissions) {
-		getHibernateTemplate().deleteAll(permissions);
+		for (Permission permission : permissions) {
+			delete(permission);
+		}
 	}
 
 	/**
 	 * {@inheritDoc}
 	 */
+	@Override	
 	public List<Permission> loadAll() {
-		return getHibernateTemplate().loadAll(Permission.class);
+		return getEntityManager().createNamedQuery(Permission.FIND_ALL, Permission.class).getResultList();
 	}
 
 	/**
 	 * {@inheritDoc}
 	 */
-	@SuppressWarnings("unchecked")
-	public List<Permission> findByExample(Permission permission) {
-		return getHibernateTemplate().findByExample(permission);
+	@Override
+	public Permission findById(long id) {
+		TypedQuery<Permission> query = getEntityManager().createNamedQuery(Permission.FIND_BY_TITLE, Permission.class);		
+		query.setParameter("id", id);		
+		List<Permission> results = query.getResultList();		
+		return results.get(0);
 	}
 
 	/**
 	 * {@inheritDoc}
 	 */
-	public Permission load(long id) {
-		return (Permission) getHibernateTemplate().get(Permission.class, id);
-	}
-
-	/**
-	 * {@inheritDoc}
-	 */
+	@Override
+	@Transactional
 	public void saveOrUpdate(Permission permission) {
-		//title is unique, it should return exactly this permission but with the correct id		
-		Permission tmpPermission = findOneByExample(permission);
-		//if the given permission is present in the database, adapt the id of the permission
-		if (tmpPermission != null) {
-			permission.setId(tmpPermission.getId());
+		if (permission.getId() == null) {
+			super.create(permission);
+		} else {
+			super.update(permission);
 		}
-		getHibernateTemplate().saveOrUpdate(permission);
 	}
 
 	/**
 	 * {@inheritDoc}
 	 */
-	@SuppressWarnings("unchecked")
+	@Override
 	public Permission findByTitle(String title) {
-		DetachedCriteria criteria = DetachedCriteria.forClass(Permission.class);
-		criteria.add(Restrictions.eq("title", title));
-		 		
- 		List<Permission> result = getHibernateTemplate().findByCriteria(criteria);
- 		
- 		if (result.isEmpty()) {
- 			return null;
- 		} else {
- 			return result.get(0);
-		}
-	}
-		
-	/**
-	 * {@inheritDoc}
-	 */
-	@SuppressWarnings("unchecked")
-	public Permission findOneByExample(Permission permission) {
-		List<Permission> possiblePermissions = getHibernateTemplate().findByExample(permission);
-		
-		if (possiblePermissions.size() > 1) {
-			//if there is more than one, we don't know which to choose, so just return null
-			return null;
-		} else if (possiblePermissions.size() == 1) {
-			return possiblePermissions.get(0);
-		} else {
-			return null;
-		}
+		TypedQuery<Permission> query = getEntityManager().createNamedQuery(Permission.FIND_BY_TITLE, Permission.class);		
+		query.setParameter("title", title);		
+		List<Permission> results = query.getResultList();		
+		return results.get(0);
 	}
 }

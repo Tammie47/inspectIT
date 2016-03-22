@@ -4,9 +4,11 @@ import info.novatec.inspectit.cmr.model.MethodIdent;
 import info.novatec.inspectit.cmr.service.ICachedDataService;
 import info.novatec.inspectit.communication.DefaultData;
 import info.novatec.inspectit.communication.data.ExceptionSensorData;
+import info.novatec.inspectit.communication.data.HttpInfo;
 import info.novatec.inspectit.communication.data.HttpTimerData;
 import info.novatec.inspectit.communication.data.InvocationSequenceData;
 import info.novatec.inspectit.communication.data.InvocationSequenceDataHelper;
+import info.novatec.inspectit.communication.data.LoggingData;
 import info.novatec.inspectit.communication.data.ParameterContentData;
 import info.novatec.inspectit.rcp.InspectIT;
 import info.novatec.inspectit.rcp.InspectITImages;
@@ -415,16 +417,16 @@ public class InvocDetailInputController extends AbstractTreeInputController {
 
 			if (InvocationSequenceDataHelper.hasHttpTimerData(data)) {
 				HttpTimerData httpTimer = (HttpTimerData) data.getTimerData();
-				if (null != httpTimer.getUri()) {
+				HttpInfo httpInfo = httpTimer.getHttpInfo();
+				if (null != httpInfo.getUri()) {
 					styledString.append("URI: ");
-					styledString.append(httpTimer.getUri());
+					styledString.append(httpInfo.getUri());
 					styledString.append(" | ");
 				}
 			}
 
 			if (InvocationSequenceDataHelper.hasCapturedParameters(data)) {
-				Set<ParameterContentData> parameters = InvocationSequenceDataHelper.getCapturedParameters(data);
-
+				List<ParameterContentData> parameters = InvocationSequenceDataHelper.getCapturedParameters(data, true);
 				boolean isFirst = true;
 				for (ParameterContentData parameterContentData : parameters) {
 					// shorten the representation here.
@@ -438,6 +440,12 @@ public class InvocDetailInputController extends AbstractTreeInputController {
 					styledString.append("': ");
 					styledString.append(TextFormatter.clearLineBreaks(parameterContentData.getContent()));
 				}
+			}
+
+			if (InvocationSequenceDataHelper.hasLoggingData(data)) {
+				LoggingData loggingData = data.getLoggingData();
+				styledString.append("[" + loggingData.getLevel().toUpperCase() + "] ");
+				styledString.append(loggingData.getMessage());
 			}
 
 			return styledString;

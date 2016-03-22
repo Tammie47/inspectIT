@@ -3,6 +3,9 @@ package info.novatec.inspectit.agent.core;
 import info.novatec.inspectit.communication.MethodSensorData;
 import info.novatec.inspectit.communication.SystemSensorData;
 import info.novatec.inspectit.communication.data.ExceptionSensorData;
+import info.novatec.inspectit.communication.data.JmxSensorValueData;
+
+import java.util.concurrent.ScheduledExecutorService;
 
 /**
  * Interface definition for the core service. The core service is the central point of the Agent
@@ -10,6 +13,7 @@ import info.novatec.inspectit.communication.data.ExceptionSensorData;
  * 
  * @author Patrice Bouillet
  * @author Eduard Tudenhoefner
+ * @author Alfred Krauss
  * 
  */
 public interface ICoreService {
@@ -23,6 +27,20 @@ public interface ICoreService {
 	 * Stop this component.
 	 */
 	void stop();
+
+	/**
+	 * Adds a new data object from the jmx sensor to the value storage.
+	 * 
+	 * @param sensorTypeIdent
+	 *            The id of the sensor type.
+	 * @param objectName
+	 *            The name of the mBean
+	 * @param attributeName
+	 * 			  The attributeName of the Attribute.
+	 * @param jmxSensorValueData
+	 *            Part of the jmx sensor data.
+	 */
+	void addJmxSensorValueData(long sensorTypeIdent, String objectName, String attributeName, JmxSensorValueData jmxSensorValueData);
 
 	/**
 	 * Adds a new measurement from a method sensor to the value storage.
@@ -142,4 +160,10 @@ public interface ICoreService {
 	 */
 	void removeListListener(ListListener<?> listener);
 
+	/**
+	 * Returns the scheduled executor-service.
+	 * 
+	 * @return a {@link ScheduledExecutorService}
+	 */
+	ScheduledExecutorService getScheduledExecutorService();
 }

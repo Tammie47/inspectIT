@@ -203,7 +203,10 @@ public class RepositoryManagerView extends ViewPart implements IRefreshableView,
 		mainForm.setLayoutData(new GridData(SWT.FILL, SWT.FILL, true, true));
 		toolkit.decorateFormHeading(mainForm);
 
-		Tree tree = toolkit.createTree(mainForm.getBody(), SWT.V_SCROLL | SWT.H_SCROLL);
+		int borderStyle = toolkit.getBorderStyle();
+		toolkit.setBorderStyle(SWT.NULL);
+		Tree tree = toolkit.createTree(mainForm.getBody(), SWT.V_SCROLL | SWT.H_SCROLL | SWT.MULTI);
+		toolkit.setBorderStyle(borderStyle);
 		treeViewer = new DeferredTreeViewer(tree);
 
 		// create tree content provider

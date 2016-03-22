@@ -2,19 +2,23 @@ package info.novatec.inspectit.agent.core.impl;
 
 import info.novatec.inspectit.agent.buffer.IBufferStrategy;
 import info.novatec.inspectit.agent.config.IConfigurationStorage;
+import info.novatec.inspectit.agent.config.impl.JmxSensorTypeConfig;
 import info.novatec.inspectit.agent.config.impl.PlatformSensorTypeConfig;
 import info.novatec.inspectit.agent.connection.IConnection;
+import info.novatec.inspectit.agent.connection.ServerUnavailableException;
 import info.novatec.inspectit.agent.core.ICoreService;
 import info.novatec.inspectit.agent.core.IIdManager;
 import info.novatec.inspectit.agent.core.IObjectStorage;
 import info.novatec.inspectit.agent.core.ListListener;
 import info.novatec.inspectit.agent.sending.ISendingStrategy;
+import info.novatec.inspectit.agent.sensor.jmx.IJmxSensor;
 import info.novatec.inspectit.agent.sensor.platform.IPlatformSensor;
 import info.novatec.inspectit.communication.DefaultData;
 import info.novatec.inspectit.communication.ExceptionEvent;
 import info.novatec.inspectit.communication.MethodSensorData;
 import info.novatec.inspectit.communication.SystemSensorData;
 import info.novatec.inspectit.communication.data.ExceptionSensorData;
+import info.novatec.inspectit.communication.data.JmxSensorValueData;
 import info.novatec.inspectit.spring.logger.Log;
 
 import java.util.ArrayList;
@@ -22,11 +26,13 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ScheduledExecutorService;
 
 import org.slf4j.Logger;
 import org.springframework.beans.factory.DisposableBean;
 import org.springframework.beans.factory.InitializingBean;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.context.annotation.DependsOn;
 import org.springframework.stereotype.Component;
 
@@ -35,6 +41,7 @@ import org.springframework.stereotype.Component;
  * 
  * @author Patrice Bouillet
  * @author Eduard Tudenhoefner
+ * @author Alfred Krauss
  * 
  */
 @Component
@@ -110,13 +117,13 @@ public class CoreService implements ICoreService, InitializingBean, DisposableBe
 	/**
 	 * The refresh time for the platformSensorRefresher thread in ms.
 	 */
-	private long platformSensorRefreshTime = DEFAULT_REFRESH_TIME;
+	private long sensorRefreshTime = DEFAULT_REFRESH_TIME;
 
 	/**
-	 * The platformSensorRefresher is a thread which updates the platform informations after the
-	 * specified platformSensorRefreshTime.
+	 * The sensorRefresher is a thread which updates the platform informations after the specified
+	 * platformSensorRefreshTime.
 	 */
-	private volatile PlatformSensorRefresher platformSensorRefresher;
+	private volatile SensorRefresher sensorRefresher;
 
 	/**
 	 * The preparing thread used to execute the preparation of the measurement in a separate
@@ -133,7 +140,14 @@ public class CoreService implements ICoreService, InitializingBean, DisposableBe
 	 * Defines if there was an exception before while trying to send the data. Used to throttle the
 	 * printing of log statements.
 	 */
-	private boolean sendingException = false;
+	private boolean sendingExceptionNotice = false;
+
+	/**
+	 * The scheduled executor service.
+	 */
+	@Autowired
+	@Qualifier("coreServiceExecutorService")
+	private ScheduledExecutorService scheduledExecutorService;
 
 	/**
 	 * The default constructor which needs 4 parameters.
@@ -192,8 +206,8 @@ public class CoreService implements ICoreService, InitializingBean, DisposableBe
 		sendingThread = new SendingThread();
 		sendingThread.start();
 
-		platformSensorRefresher = new PlatformSensorRefresher();
-		platformSensorRefresher.start();
+		sensorRefresher = new SensorRefresher();
+		sensorRefresher.start();
 
 		Runtime.getRuntime().addShutdownHook(new ShutdownHookSender());
 	}
@@ -214,8 +228,8 @@ public class CoreService implements ICoreService, InitializingBean, DisposableBe
 			sendingThread.interrupt();
 		}
 
-		Thread temp = platformSensorRefresher;
-		platformSensorRefresher = null; // NOPMD
+		Thread temp = sensorRefresher;
+		sensorRefresher = null; // NOPMD
 		synchronized (temp) {
 			temp.interrupt();
 		}
@@ -230,6 +244,23 @@ public class CoreService implements ICoreService, InitializingBean, DisposableBe
 		synchronized (preparingThread) {
 			preparingThread.notifyAll();
 		}
+	}
+
+	/**
+	 * {@inheritDoc}
+	 */
+	public void addJmxSensorValueData(long sensorTypeIdent, String objectName, String attributeName, JmxSensorValueData jmxSensorValueData) {
+		StringBuffer buffer = new StringBuffer();
+		buffer.append(sensorTypeIdent);
+		buffer.append('.');
+		buffer.append(objectName);
+		buffer.append('.');
+		buffer.append(attributeName);
+		buffer.append('.');
+		// Added timestamp to be able to send multiple objects to cmr.
+		buffer.append(jmxSensorValueData.getTimeStamp().getTime());
+		sensorDataObjects.put(buffer.toString(), jmxSensorValueData);
+		notifyListListeners();
 	}
 
 	/**
@@ -291,9 +322,8 @@ public class CoreService implements ICoreService, InitializingBean, DisposableBe
 		// we always only save the first data object, because this object contains the nested
 		// objects to create the whole exception tree
 		if (exceptionSensorData.getExceptionEvent().equals(ExceptionEvent.CREATED)) {
-			// if a data object with the same hash code was already created, then it has to be
-			// removed, because it was created from a constructor delegation. For us only the
-			// last-most data object is relevant
+			// if a data object with the same hash code was already created, then it has to be For
+			// us only the last-most data object is relevant
 			sensorDataObjects.put(key, exceptionSensorData);
 			notifyListListeners();
 		}
@@ -345,6 +375,13 @@ public class CoreService implements ICoreService, InitializingBean, DisposableBe
 	/**
 	 * {@inheritDoc}
 	 */
+	public ScheduledExecutorService getScheduledExecutorService() {
+		return scheduledExecutorService;
+	}
+
+	/**
+	 * {@inheritDoc}
+	 */
 	public void addListListener(ListListener<?> listener) {
 		if (!listListeners.contains(listener)) {
 			listListeners.add(listener);
@@ -373,18 +410,19 @@ public class CoreService implements ICoreService, InitializingBean, DisposableBe
 	}
 
 	/**
-	 * The PlatformSensorRefresher is a {@link Thread} which waits the specified
-	 * platformSensorRefreshTime and then updates the platform informations.
+	 * The SensorRefresher is a {@link Thread} which waits the specified sensorRefreshTime and then
+	 * updates the information of the platform and jmx sensor.
 	 * 
 	 * @author Eduard Tudenhoefner
+	 * @author Alfred Krauss
 	 * 
 	 */
-	private class PlatformSensorRefresher extends Thread {
+	private class SensorRefresher extends Thread {
 
 		/**
 		 * Creates a new instance of the <code>PlatformSensorRefresher</code> as a daemon thread.
 		 */
-		public PlatformSensorRefresher() {
+		public SensorRefresher() {
 			setName("inspectit-platform-sensor-refresher-thread");
 			setDaemon(true);
 		}
@@ -394,13 +432,14 @@ public class CoreService implements ICoreService, InitializingBean, DisposableBe
 		 */
 		public void run() {
 			Thread thisThread = Thread.currentThread();
-			while (platformSensorRefresher == thisThread) { // NOPMD
+
+			while (sensorRefresher == thisThread) { // NOPMD
 				try {
 					synchronized (this) {
-						wait(platformSensorRefreshTime);
+						wait(sensorRefreshTime);
 					}
 				} catch (InterruptedException e) {
-					log.error("Platform sensor refresher was interrupted!");
+					log.error("Sensor refresher was interrupted!");
 				}
 
 				// iterate the platformSensors and update the information
@@ -409,6 +448,12 @@ public class CoreService implements ICoreService, InitializingBean, DisposableBe
 					if (platformSensor.automaticUpdate()) {
 						platformSensor.update(CoreService.this, platformSensorTypeConfig.getId());
 					}
+				}
+
+				// iterate the jmxSensors and update the information
+				for (JmxSensorTypeConfig jmxSensorTypeConfig : configurationStorage.getJmxSensorTypes()) {
+					IJmxSensor jmxSensor = (IJmxSensor) jmxSensorTypeConfig.getSensorType();
+					jmxSensor.update(CoreService.this, jmxSensorTypeConfig.getId());
 				}
 			}
 		}
@@ -419,18 +464,18 @@ public class CoreService implements ICoreService, InitializingBean, DisposableBe
 	 * 
 	 * @return The platform sensor refresh time.
 	 */
-	public long getPlatformSensorRefreshTime() {
-		return platformSensorRefreshTime;
+	public long getSensorRefreshTime() {
+		return sensorRefreshTime;
 	}
 
 	/**
 	 * Sets the platform sensor refresh time.
 	 * 
-	 * @param platformSensorRefreshTime
+	 * @param sensorRefreshTime
 	 *            The platform sensor refresh time to set.
 	 */
-	public void setPlatformSensorRefreshTime(long platformSensorRefreshTime) {
-		this.platformSensorRefreshTime = platformSensorRefreshTime;
+	public void setSensorRefreshTime(long sensorRefreshTime) {
+		this.sensorRefreshTime = sensorRefreshTime;
 	}
 
 	/**
@@ -448,14 +493,12 @@ public class CoreService implements ICoreService, InitializingBean, DisposableBe
 	 */
 	@SuppressWarnings("unchecked")
 	private boolean prepareData() {
-		// check if measurements are added in the last interval, if not
-		// nothing needs to be sent.
+		// check if measurements are added in the last interval, if not nothing needs to be sent.
 		if (sensorDataObjects.isEmpty() && objectStorages.isEmpty()) {
 			return false;
 		}
 
-		// switch the references so that new data is stored
-		// while sending
+		// switch the references so that new data is stored while sending
 		temp = sensorDataObjects;
 		sensorDataObjects = measurementsProcessing;
 		measurementsProcessing = (Map<String, DefaultData>) temp;
@@ -468,8 +511,8 @@ public class CoreService implements ICoreService, InitializingBean, DisposableBe
 		List<DefaultData> tempList = new ArrayList<DefaultData>(measurementsProcessing.values());
 		measurementsProcessing.clear();
 
-		// iterate the object storages and get the value
-		// objects which will be stored in the same list.
+		// iterate the object storages and get the value objects which will be stored in the same
+		// list.
 		for (Iterator<IObjectStorage> i = objectStoragesProcessing.values().iterator(); i.hasNext();) {
 			IObjectStorage objectStorage = i.next();
 			tempList.add(objectStorage.finalizeDataObject());
@@ -493,14 +536,28 @@ public class CoreService implements ICoreService, InitializingBean, DisposableBe
 	private void send() {
 		try {
 			while (bufferStrategy.hasNext()) {
+				// if we are not connected keep data in buffer strategy
+				if (!connection.isConnected()) {
+					return;
+				}
+
 				List<DefaultData> dataToSend = bufferStrategy.next();
 				connection.sendDataObjects(dataToSend);
-				sendingException = false;
+				sendingExceptionNotice = false;
 			}
-		} catch (Throwable e) { // NOPMD NOCHK
-			if (!sendingException) {
-				sendingException = true;
-				log.error("Connection problem appeared, stopping sending actual data!", e);
+		} catch (ServerUnavailableException serverUnavailableException) {
+			if (serverUnavailableException.isServerTimeout()) {
+				log.warn("Timeout on server when sending actual data. Data might be lost!", serverUnavailableException);
+			} else {
+				if (!sendingExceptionNotice) {
+					sendingExceptionNotice = true;
+					log.error("Connection problem appeared, stopping sending actual data!", serverUnavailableException);
+				}
+			}
+		} catch (Throwable throwable) { // NOPMD NOCHK
+			if (!sendingExceptionNotice) {
+				sendingExceptionNotice = true;
+				log.error("Connection problem appeared, stopping sending actual data!", throwable);
 			}
 		}
 	}

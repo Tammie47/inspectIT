@@ -118,6 +118,21 @@
 		<property name="pathSpec" value="/remoting/ExceptionDataAccessService" />
 	</bean>
 	<!-- END -->
+	
+	<!-- Jmx Data Access Service -->
+	<bean name="jmxDataAccessRequestHandlerServlet" class="org.springframework.web.context.support.HttpRequestHandlerServlet">
+	</bean>
+
+	<bean id="jmxDataAccessServletHolder" class="org.mortbay.jetty.servlet.ServletHolder">
+		<property name="name" value="jmxDataAccessServiceExporter" />
+		<property name="servlet" ref="jmxDataAccessRequestHandlerServlet" />
+	</bean>
+
+	<bean id="jmxDataAccessServiceMapping" class="org.mortbay.jetty.servlet.ServletMapping">
+		<property name="servletName" value="jmxDataAccessServiceExporter" />
+		<property name="pathSpec" value="/remoting/JmxDataAccessService" />
+	</bean>
+	<!-- END -->
 
 	<!-- Server Status Access Service -->
 	<bean name="serverStatusRequestHandlerServlet" class="org.springframework.web.context.support.HttpRequestHandlerServlet">
@@ -180,6 +195,20 @@
 	</bean>
 	<!-- END -->
 	
+	<!-- ConfigurationInterface Service -->
+	<bean name="configurationInterfaceServiceRequestHandlerServlet" class="org.springframework.web.context.support.HttpRequestHandlerServlet" />
+
+	<bean id="configurationInterfaceServiceServletHolder" class="org.mortbay.jetty.servlet.ServletHolder">
+		<property name="name" value="configurationInterfaceServiceExporter" />
+		<property name="servlet" ref="configurationInterfaceServiceRequestHandlerServlet" />
+	</bean>
+
+	<bean id="configurationInterfaceServiceServiceMapping" class="org.mortbay.jetty.servlet.ServletMapping">
+		<property name="servletName" value="configurationInterfaceServiceExporter" />
+		<property name="pathSpec" value="/remoting/ConfigurationInterfaceService" />
+	</bean>
+	<!-- END -->
+	
 	<!-- Security Service -->
 	<bean name="securityServiceRequestHandlerServlet" class="org.springframework.web.context.support.HttpRequestHandlerServlet">
 	</bean>
@@ -195,7 +224,7 @@
 		<property name="pathSpec" value="/remoting/SecurityService" />
 	</bean>
 	<!-- END -->
-
+	
 	<!-- DEFAULT SERVER FOR STATIC CONTENT -->
 	<bean id="defaultServlet" class="org.mortbay.jetty.servlet.DefaultServlet" />
 
@@ -315,16 +344,18 @@
 				<ref bean="globalDataAccessServletHolder" />
 				<ref bean="sqlDataAccessServletHolder" />
 				<ref bean="exceptionDataAccessServletHolder" />
+				<ref bean="jmxDataAccessServletHolder" />
 				<ref bean="invocationDataAccessServletHolder" />
 				<ref bean="serverStatusServletHolder" />
 				<ref bean="cmrManagementServiceServletHolder" />
 				<ref bean="timerDataAccessServiceServletHolder" />
 				<ref bean="httpTimerDataAccessServiceServletHolder" />
 				<ref bean="storageServiceServletHolder" />
-				<ref bean="securityServiceServletHolder" />
+				<ref bean="configurationInterfaceServiceServletHolder" />
 				<ref bean="defaultServletHolder" />
 				<ref bean="uploadServletHolder" />
 				<ref bean="springDispatcherServletHolder" />
+				<ref bean="securityServiceServletHolder" />
 			</list>
 		</property>
 		<property name="servletMappings">
@@ -332,16 +363,18 @@
 				<ref bean="globalDataAccessServiceMapping" />
 				<ref bean="sqlDataAccessServiceMapping" />
 				<ref bean="exceptionDataAccessServiceMapping" />
+				<ref bean="jmxDataAccessServiceMapping" />
 				<ref bean="invocationDataAccessServiceMapping" />
 				<ref bean="serverStatusServiceMapping" />
 				<ref bean="cmrManagementServiceServiceMapping" />
 				<ref bean="timerDataAccessServiceServiceMapping" />
 				<ref bean="httpTimerDataAccessServiceServiceMapping" />
 				<ref bean="storageServiceServiceMapping" />
-				<ref bean="securityServiceServiceMapping" />
+				<ref bean="configurationInterfaceServiceServiceMapping" />
 				<ref bean="defaultServletMapping" />
 				<ref bean="uploadServletMapping" />
 				<ref bean="springDispatcherServletMapping" />
+				<ref bean="securityServiceServiceMapping" />
 			</list>
 		</property>
 		<property name="filters">

@@ -213,6 +213,10 @@ public class EditUserDialog extends TitleAreaDialog {
 		if (passwordBox.getText().isEmpty()) {
 			passwordChanged = false;
 		}
+		if (userOld.getEmail().equals("guest") && passwordChanged || !mail.equals(userOld.getEmail())) {
+			MessageDialog.openWarning(null, "Warning", "The guest user's login data can not be edited.");
+			return;
+		}
 		cmrRepositoryDefinition.getSecurityService().changeUserAttribute(userOld, mail, password, id, passwordChanged, isLocked);
 		okPressed();
 	}
@@ -249,7 +253,7 @@ public class EditUserDialog extends TitleAreaDialog {
 				adminUsers.addAll(cmrRepositoryDefinition.getSecurityService().getUsersByRole(id));
 			}
 			if (adminUsers.size() < 2) {
-				MessageDialog.openWarning(null, "Warning", "You are about to remove the last admin user. Please make sure there is at least one admin remaining.");
+				MessageDialog.openWarning(null, "Warning", "This user can not be deleted. Please make sure there is at least one admin user remaining.");
 				return;
 			}
 		} 

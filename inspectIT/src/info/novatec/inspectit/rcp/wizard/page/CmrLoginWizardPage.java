@@ -1,8 +1,6 @@
 package info.novatec.inspectit.rcp.wizard.page;
 
 
-import info.novatec.inspectit.rcp.dialog.ForgotPasswordDialog;
-
 import org.eclipse.jface.wizard.WizardPage;
 import org.eclipse.swt.events.SelectionAdapter;
 import org.eclipse.swt.events.SelectionEvent;
@@ -12,7 +10,6 @@ import org.eclipse.swt.widgets.Button;
 import org.eclipse.swt.widgets.Composite;
 import org.eclipse.swt.widgets.Event;
 import org.eclipse.swt.widgets.Label;
-import org.eclipse.swt.widgets.Shell;
 import org.eclipse.swt.SWT;
 import org.eclipse.swt.widgets.Text;
 import org.eclipse.swt.widgets.Listener;
@@ -47,12 +44,7 @@ public class CmrLoginWizardPage extends WizardPage {
 	public Text getPasswordBox() {
 		return passwordBox;
 	}
-
-	/**
-	 * {@link ForgotPasswordDialog}.
-	 */
-	private ForgotPasswordDialog forgotPasswordDialog;
-
+	
 	/**
 	 * Default constructor.
 	 * 
@@ -102,16 +94,7 @@ public class CmrLoginWizardPage extends WizardPage {
                 }
                }
 		});
-		Button forgotPassword = new Button(main, SWT.PUSH);
-		forgotPassword.setLayoutData(new GridData(SWT.BEGINNING, SWT.CENTER, false, false));
-		forgotPassword.setText("Forgot password?");
-		forgotPassword.addSelectionListener(new SelectionAdapter() {
-			@Override
-			public void widgetSelected(SelectionEvent e) {
-				resetPasswordDialog(main.getShell());
-			}
-		});
-
+		
 		Listener pageModifyListener = new Listener() {
 
 			@Override
@@ -157,16 +140,5 @@ public class CmrLoginWizardPage extends WizardPage {
 
 		setMessage(DEFAULT_MESSAGE);
 	}
-
-	/**
-	 * Dialog in case "forgot Password" Button is pressed.
-	 * 
-	 * @param parentShell
-	 *            parent shell for the {@link ForgotPasswordDialog}
-	 */
-	private void resetPasswordDialog(Shell parentShell) {
-		forgotPasswordDialog = new ForgotPasswordDialog(parentShell);
-		forgotPasswordDialog.open();
-	}
-
+	
 }

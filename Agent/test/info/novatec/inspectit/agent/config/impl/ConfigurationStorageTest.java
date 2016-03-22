@@ -13,6 +13,7 @@ import static org.hamcrest.Matchers.not;
 import static org.hamcrest.Matchers.notNullValue;
 import static org.hamcrest.Matchers.nullValue;
 import static org.mockito.Mockito.verifyZeroInteractions;
+
 import info.novatec.inspectit.agent.AbstractLogSupport;
 import info.novatec.inspectit.agent.analyzer.IClassPoolAnalyzer;
 import info.novatec.inspectit.agent.analyzer.IInheritanceAnalyzer;
@@ -33,12 +34,12 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import javassist.Modifier;
-
 import org.mockito.Mock;
 import org.slf4j.LoggerFactory;
 import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.Test;
+
+import javassist.Modifier;
 
 @SuppressWarnings("PMD")
 public class ConfigurationStorageTest extends AbstractLogSupport {
@@ -55,7 +56,7 @@ public class ConfigurationStorageTest extends AbstractLogSupport {
 	 * This method will be executed before every method is executed in here. This ensures that some
 	 * tests don't modify the contents of the configuration storage.
 	 */
-	@BeforeMethod(dependsOnMethods = { "initMocks" })
+	@BeforeMethod
 	public void initTestClass() throws StorageException {
 		configurationStorage = new ConfigurationStorage(classPoolAnalyzer, inheritanceAnalyzer);
 		configurationStorage.log = LoggerFactory.getLogger(ConfigurationStorage.class);
@@ -63,6 +64,9 @@ public class ConfigurationStorageTest extends AbstractLogSupport {
 		// name and repository
 		configurationStorage.setAgentName("UnitTestAgent");
 		configurationStorage.setRepository("localhost", 1099);
+
+		// jmx sensor types
+		configurationStorage.addJmxSensorType("info.novatec.inspectit.agent.sensor.jmx.JmxSensor", "jmx_test");
 
 		// method sensor types
 		Map<String, Object> settings = new HashMap<String, Object>(1);
@@ -106,6 +110,8 @@ public class ConfigurationStorageTest extends AbstractLogSupport {
 		configurationStorage.setBufferStrategy("info.novatec.inspectit.agent.buffer.impl.SimpleBufferStrategy", null);
 
 		// sensor definitions
+		configurationStorage.addUnregisteredJmxConfig("jmx_test", "Catalina:type=Server", "port");
+
 		configurationStorage.addSensor("timer", "*", "*", null, true, null);
 
 		configurationStorage.addSensor("isequence", "info.novatec.inspectitsamples.calculator.Calculator", "actionPerformed", null, true, null);
@@ -201,6 +207,24 @@ public class ConfigurationStorageTest extends AbstractLogSupport {
 		configurationStorage.setAgentName("agent1");
 
 		assertThat(configurationStorage.getAgentName(), is(equalTo("UnitTestAgent")));
+	}
+
+	@Test
+	public void jmxSensorTypesCheck() {
+		List<JmxSensorTypeConfig> jmxSensorTypeConfigs = configurationStorage.getJmxSensorTypes();
+		assertThat(jmxSensorTypeConfigs, hasSize(1));
+		JmxSensorTypeConfig jmxSensorTypeConfig = jmxSensorTypeConfigs.get(0);
+		assertThat(jmxSensorTypeConfig.getName(), is(equalTo("jmx_test")));
+		assertThat(jmxSensorTypeConfig.getClassName(), is(equalTo("info.novatec.inspectit.agent.sensor.jmx.JmxSensor")));
+		
+
+		List<UnregisteredJmxConfig> jmxConfigs = configurationStorage.getUnregisteredJmxConfigs();
+		assertThat(jmxConfigs, is(notNullValue()));
+		assertThat(jmxConfigs, hasSize(1));
+		UnregisteredJmxConfig actualConfig = jmxConfigs.get(0);
+		assertThat(actualConfig.getPassedAttributeNameExpression(), is(equalTo("port")));
+		assertThat(actualConfig.getPassedObjectNameExpression(), is(equalTo("Catalina:type=Server")));
+		assertThat(actualConfig.getJmxSensorTypeConfig(), is(equalTo(jmxSensorTypeConfig)));
 	}
 
 	@Test

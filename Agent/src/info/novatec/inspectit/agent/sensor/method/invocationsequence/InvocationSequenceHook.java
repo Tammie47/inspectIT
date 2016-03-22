@@ -14,16 +14,19 @@ import info.novatec.inspectit.agent.hooking.IConstructorHook;
 import info.novatec.inspectit.agent.hooking.IMethodHook;
 import info.novatec.inspectit.agent.sending.ISendingStrategy;
 import info.novatec.inspectit.agent.sensor.exception.ExceptionSensor;
-import info.novatec.inspectit.agent.sensor.method.jdbc.ConnectionMetaDataSensor;
 import info.novatec.inspectit.agent.sensor.method.jdbc.ConnectionSensor;
 import info.novatec.inspectit.agent.sensor.method.jdbc.PreparedStatementParameterSensor;
 import info.novatec.inspectit.agent.sensor.method.jdbc.PreparedStatementSensor;
+import info.novatec.inspectit.agent.sensor.method.logging.Log4JLoggingSensor;
 import info.novatec.inspectit.communication.DefaultData;
 import info.novatec.inspectit.communication.MethodSensorData;
 import info.novatec.inspectit.communication.SystemSensorData;
 import info.novatec.inspectit.communication.data.ExceptionSensorData;
 import info.novatec.inspectit.communication.data.HttpTimerData;
 import info.novatec.inspectit.communication.data.InvocationSequenceData;
+import info.novatec.inspectit.communication.data.InvocationSequenceDataHelper;
+import info.novatec.inspectit.communication.data.JmxSensorValueData;
+import info.novatec.inspectit.communication.data.LoggingData;
 import info.novatec.inspectit.communication.data.ParameterContentData;
 import info.novatec.inspectit.communication.data.SqlStatementData;
 import info.novatec.inspectit.communication.data.TimerData;
@@ -36,6 +39,7 @@ import java.sql.Timestamp;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.ScheduledExecutorService;
 
 import org.apache.commons.collections.CollectionUtils;
 import org.slf4j.Logger;
@@ -49,9 +53,9 @@ import org.slf4j.LoggerFactory;
  * other hooks which are called during the execution of this invocation. The
  * <code>defaultCoreService</code> field is used to delegate some calls directly to the original
  * core service and later sending of the data to the server.
- * 
+ *
  * @author Patrice Bouillet
- * 
+ *
  */
 public class InvocationSequenceHook implements IMethodHook, IConstructorHook, ICoreService {
 
@@ -101,12 +105,12 @@ public class InvocationSequenceHook implements IMethodHook, IConstructorHook, IC
 	/**
 	 * Saves the min duration for faster access of the values.
 	 */
-	private Map<Long, Double> minDurationMap = new HashMap<Long, Double>();
+	private final Map<Long, Double> minDurationMap = new HashMap<Long, Double>();
 
 	/**
 	 * The StringConstraint to ensure a maximum length of strings.
 	 */
-	private StringConstraint strConstraint;
+	private final StringConstraint strConstraint;
 
 	/**
 	 * If enhanced exception sensor is ON.
@@ -116,7 +120,7 @@ public class InvocationSequenceHook implements IMethodHook, IConstructorHook, IC
 	/**
 	 * The default constructor is initialized with a reference to the original {@link ICoreService}
 	 * implementation to delegate all calls to if the data needs to be sent.
-	 * 
+	 *
 	 * @param timer
 	 *            The timer.
 	 * @param idManager
@@ -150,12 +154,12 @@ public class InvocationSequenceHook implements IMethodHook, IConstructorHook, IC
 			long registeredMethodId = idManager.getRegisteredMethodId(methodId);
 
 			if (null == threadLocalInvocationData.get()) {
-				// save the start time
-				timeStack.push(new Double(timer.getCurrentTime()));
-
 				// the sensor type is only available in the beginning of the
 				// sequence trace
 				long registeredSensorTypeId = idManager.getRegisteredSensorTypeId(sensorTypeId);
+
+				// save the start time
+				timeStack.push(new Double(timer.getCurrentTime()));
 
 				// no invocation tracer is currently started, so we do that now.
 				InvocationSequenceData invocationSequenceData = new InvocationSequenceData(timestamp, platformId, registeredSensorTypeId, registeredMethodId);
@@ -251,23 +255,40 @@ public class InvocationSequenceHook implements IMethodHook, IConstructorHook, IC
 						invocationSequenceData.setDuration(duration);
 						invocationSequenceData.setStart(startTime);
 						invocationSequenceData.setEnd(endTime);
-						coreService.addMethodSensorData(sensorTypeId, methodId, String.valueOf(System.currentTimeMillis()), invocationSequenceData);
+						coreService.addMethodSensorData(sensorTypeId, methodId, String.valueOf(startTime), invocationSequenceData);
 					}
 				}
 
 				threadLocalInvocationData.set(null);
 			} else {
+				// check for the correct id due to the IdNotAvailableException we must be sure that
+				// we are closing the right sequence
+				try {
+					long registeredId = idManager.getRegisteredMethodId(methodId);
+					if (registeredId != invocationSequenceData.getMethodIdent()) {
+						return;
+					}
+				} catch (IdNotAvailableException e) {
+					if (LOG.isDebugEnabled()) {
+						LOG.debug("Skipping end of invocation sequence because of a (currently) not mapped ID");
+					}
+					return;
+				}
+
 				// just close the nested sequence and set the correct child count
 				InvocationSequenceData parentSequence = invocationSequenceData.getParentSequence();
-				// check if we should not include this invocation because of exception delegation or
-				// SQL wrapping
-				if (removeDueToExceptionDelegation(rsc, invocationSequenceData) || removeDueToWrappedSqls(rsc, invocationSequenceData)) {
+				// check if we should not include this invocation because of exception delegation,
+				// SQL wrapping or empty logging
+				if (removeDueToExceptionDelegation(rsc, invocationSequenceData) || removeDueToWrappedSqls(rsc, invocationSequenceData) || removeDueToNotCapturedLogging(rsc, invocationSequenceData)) {
 					parentSequence.getNestedSequences().remove(invocationSequenceData);
 					parentSequence.setChildCount(parentSequence.getChildCount() - 1);
-					// but connect all possible children to the parent then
-					// we are eliminating one level here
+					// but connect all possible children to the parent then we are eliminating one
+					// level here
 					if (CollectionUtils.isNotEmpty(invocationSequenceData.getNestedSequences())) {
-						parentSequence.getNestedSequences().addAll(invocationSequenceData.getNestedSequences());
+						for (InvocationSequenceData child : invocationSequenceData.getNestedSequences()) {
+							child.setParentSequence(parentSequence);
+							parentSequence.getNestedSequences().add(child);
+						}
 						parentSequence.setChildCount(parentSequence.getChildCount() + invocationSequenceData.getChildCount());
 					}
 				} else {
@@ -283,7 +304,7 @@ public class InvocationSequenceHook implements IMethodHook, IConstructorHook, IC
 	/**
 	 * Returns if the given {@link InvocationSequenceData} should be removed due to the exception
 	 * constructor delegation.
-	 * 
+	 *
 	 * @param rsc
 	 *            {@link RegisteredSensorConfig}
 	 * @param invocationSequenceData
@@ -305,7 +326,7 @@ public class InvocationSequenceHook implements IMethodHook, IConstructorHook, IC
 	/**
 	 * Returns if the given {@link InvocationSequenceData} should be removed due to the wrapping of
 	 * the prepared SQL statements.
-	 * 
+	 *
 	 * @param rsc
 	 *            {@link RegisteredSensorConfig}
 	 * @param invocationSequenceData
@@ -328,6 +349,28 @@ public class InvocationSequenceHook implements IMethodHook, IConstructorHook, IC
 	}
 
 	/**
+	 * Returns if a given {@link InvocationSequenceData} element should be removed due to having an
+	 * empty logging element. This can happen if the logging occurred with a lower logging level
+	 * than the configuration.
+	 *
+	 * @param rsc
+	 *            {@link RegisteredSensorConfig}
+	 * @param invocationSequenceData
+	 *            {@link InvocationSequenceData} to check.
+	 * @return True if the invocation should be removed.
+	 */
+	private boolean removeDueToNotCapturedLogging(RegisteredSensorConfig rsc, InvocationSequenceData invocationSequenceData) {
+		if (1 == rsc.getSensorTypeConfigs().size() || (2 == rsc.getSensorTypeConfigs().size() && enhancedExceptionSensor)) {
+			for (MethodSensorTypeConfig methodSensorTypeConfig : rsc.getSensorTypeConfigs()) {
+				if (Log4JLoggingSensor.class.getCanonicalName().equals(methodSensorTypeConfig.getClassName())) {
+					return !InvocationSequenceDataHelper.hasLoggingData(invocationSequenceData);
+				}
+			}
+		}
+		return false;
+	}
+
+	/**
 	 * Defines if the invocation container should skip the creation and processing of the invocation
 	 * for the given object and {@link RegisteredSensorConfig}. We will skip if any of following
 	 * conditions are met:
@@ -338,10 +381,10 @@ public class InvocationSequenceHook implements IMethodHook, IConstructorHook, IC
 	 * <li>{@link RegisteredSensorConfig} has only connection sensor.
 	 * <li>{@link RegisteredSensorConfig} has only connection meta data sensor.
 	 * </ul>
-	 * 
+	 *
 	 * @param rsc
 	 *            {@link RegisteredSensorConfig}.
-	 * 
+	 *
 	 * @return Return <code>true</code> if hook should skip creation and processing, false
 	 *         otherwise.
 	 */
@@ -356,10 +399,6 @@ public class InvocationSequenceHook implements IMethodHook, IConstructorHook, IC
 				if (ConnectionSensor.class.getCanonicalName().equals(methodSensorTypeConfig.getClassName())) {
 					return true;
 				}
-
-				if (ConnectionMetaDataSensor.class.getCanonicalName().equals(methodSensorTypeConfig.getClassName())) {
-					return true;
-				}
 			}
 		}
 		return false;
@@ -368,7 +407,7 @@ public class InvocationSequenceHook implements IMethodHook, IConstructorHook, IC
 	/**
 	 * This checks if the invocation has to be saved or not (like the min duration is set and the
 	 * invocation is faster than the specified time).
-	 * 
+	 *
 	 * @param coreService
 	 *            The reference to the core service which holds the data objects etc.
 	 * @param methodId
@@ -397,7 +436,7 @@ public class InvocationSequenceHook implements IMethodHook, IConstructorHook, IC
 			invocationSequenceData.setDuration(duration);
 			invocationSequenceData.setStart(startTime);
 			invocationSequenceData.setEnd(endTime);
-			coreService.addMethodSensorData(sensorTypeId, methodId, String.valueOf(System.currentTimeMillis()), invocationSequenceData);
+			coreService.addMethodSensorData(sensorTypeId, methodId, String.valueOf(startTime), invocationSequenceData);
 		} else {
 			if (LOG.isDebugEnabled()) {
 				LOG.debug("Not saving invocation. " + duration + " < " + minduration + " ID(local): " + rsc.getId());
@@ -423,7 +462,7 @@ public class InvocationSequenceHook implements IMethodHook, IConstructorHook, IC
 	/**
 	 * Save the data objects which are coming from all the different sensor types in the current
 	 * invocation tracer context.
-	 * 
+	 *
 	 * @param dataObject
 	 *            The data object to save.
 	 */
@@ -445,7 +484,8 @@ public class InvocationSequenceHook implements IMethodHook, IConstructorHook, IC
 		}
 
 		if (dataObject.getClass().equals(TimerData.class)) {
-			// don't overwrite an already existing timerdata or httptimerdata object.
+			// don't overwrite an already existing timerdata or httptimerdata
+			// object.
 			if (null == invocationSequenceData.getTimerData()) {
 				invocationSequenceData.setTimerData((TimerData) dataObject);
 			}
@@ -454,6 +494,11 @@ public class InvocationSequenceHook implements IMethodHook, IConstructorHook, IC
 		if (dataObject.getClass().equals(ExceptionSensorData.class)) {
 			ExceptionSensorData exceptionSensorData = (ExceptionSensorData) dataObject;
 			invocationSequenceData.addExceptionSensorData(exceptionSensorData);
+		}
+
+		if (dataObject.getClass().equals(LoggingData.class)) {
+			LoggingData loggingData = (LoggingData) dataObject;
+			invocationSequenceData.setLoggingData(loggingData);
 		}
 	}
 
@@ -607,4 +652,19 @@ public class InvocationSequenceHook implements IMethodHook, IConstructorHook, IC
 	public void stop() {
 		throw new UnsupportedMethodException();
 	}
+
+	/**
+	 * {@inheritDoc}
+	 */
+	public ScheduledExecutorService getScheduledExecutorService() {
+		throw new UnsupportedMethodException();
+	}
+
+	/**
+	 * {@inheritDoc}
+	 */
+	public void addJmxSensorValueData(long sensorTypeIdent, String objectName, String attributeName, JmxSensorValueData jmxSensorValueData) {
+		throw new UnsupportedMethodException();
+	}
+
 }

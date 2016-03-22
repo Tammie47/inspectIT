@@ -132,8 +132,7 @@ public class EditPermissionDialog extends TitleAreaDialog {
 		 * Notifies that the edit button has been pressed.
 		 */
 		private void editPressed() {
-			permissionOld.setParameter(permissionParameterBox.getText());
-			cmrRepositoryDefinition.getSecurityService().changePermissionParameter(permissionOld);		
+			cmrRepositoryDefinition.getSecurityService().changePermissionAttributes(permissionOld, permissionOld.getTitle(), permissionDescriptionBox.getText(), permissionParameterBox.getText());		
 			okPressed();
 		}
 

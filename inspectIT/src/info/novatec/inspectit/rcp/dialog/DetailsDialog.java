@@ -12,6 +12,7 @@ import info.novatec.inspectit.rcp.formatter.TextFormatter;
 import info.novatec.inspectit.rcp.model.SensorTypeEnum;
 import info.novatec.inspectit.rcp.repository.RepositoryDefinition;
 import info.novatec.inspectit.rcp.util.AccessibleArrowImage;
+import info.novatec.inspectit.rcp.util.ClipboardUtil;
 
 import java.util.HashMap;
 import java.util.List;
@@ -22,9 +23,6 @@ import org.eclipse.core.commands.Command;
 import org.eclipse.jface.dialogs.Dialog;
 import org.eclipse.jface.dialogs.IDialogConstants;
 import org.eclipse.swt.SWT;
-import org.eclipse.swt.dnd.Clipboard;
-import org.eclipse.swt.dnd.TextTransfer;
-import org.eclipse.swt.dnd.Transfer;
 import org.eclipse.swt.graphics.Image;
 import org.eclipse.swt.layout.FillLayout;
 import org.eclipse.swt.layout.GridData;
@@ -71,6 +69,7 @@ public class DetailsDialog extends Dialog {
 		NAVIGATE_COMMANDS_IDS.put("info.novatec.inspectit.rcp.commands.navigateToGroupedExceptionType", "Grouped Exception View");
 
 		ACTION_COMMANDS_IDS.put("info.novatec.inspectit.rcp.commands.copySqlQuery", "Copy SQL Query");
+		ACTION_COMMANDS_IDS.put("info.novatec.inspectit.rcp.commands.copyLogMessage", "Copy Log Message");
 		ACTION_COMMANDS_IDS.put("info.novatec.inspectit.rcp.commands.displayInChart", "Display in Chart");
 		ACTION_COMMANDS_IDS.put("org.eclipse.ui.file.save", "Save to Server");
 	}
@@ -351,9 +350,7 @@ public class DetailsDialog extends Dialog {
 				sb.append('\n');
 			}
 
-			TextTransfer textTransfer = TextTransfer.getInstance();
-			Clipboard cb = new Clipboard(getShell().getDisplay());
-			cb.setContents(new Object[] { sb.toString() }, new Transfer[] { textTransfer });
+			ClipboardUtil.textToClipboard(getShell().getDisplay(), sb.toString());
 		}
 	}
 

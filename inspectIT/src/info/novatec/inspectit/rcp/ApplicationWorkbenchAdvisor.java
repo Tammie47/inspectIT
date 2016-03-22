@@ -1,5 +1,9 @@
 package info.novatec.inspectit.rcp;
 
+import info.novatec.inspectit.rcp.job.CheckNewVersionJob;
+import info.novatec.inspectit.rcp.perspective.AnalyzePerspective;
+
+import org.eclipse.core.runtime.jobs.Job;
 import org.eclipse.ui.application.IWorkbenchConfigurer;
 import org.eclipse.ui.application.IWorkbenchWindowConfigurer;
 import org.eclipse.ui.application.WorkbenchAdvisor;
@@ -13,11 +17,6 @@ import org.eclipse.ui.application.WorkbenchWindowAdvisor;
  * 
  */
 public class ApplicationWorkbenchAdvisor extends WorkbenchAdvisor {
-
-	/**
-	 * The initial perspective ID.
-	 */
-	private static final String PERSPECTIVE_ID = "inspectit.perspective";
 
 	/**
 	 * {@inheritDoc}
@@ -40,8 +39,20 @@ public class ApplicationWorkbenchAdvisor extends WorkbenchAdvisor {
 	/**
 	 * {@inheritDoc}
 	 */
+	@Override
+	public void postStartup() {
+		super.postStartup();
+
+		// fire up the auto new version check
+		Job checkNewVersionJob = new CheckNewVersionJob(false);
+		checkNewVersionJob.schedule();
+	}
+
+	/**
+	 * {@inheritDoc}
+	 */
 	public String getInitialWindowPerspectiveId() {
-		return PERSPECTIVE_ID;
+		return AnalyzePerspective.PERSPECTIVE_ID;
 	}
 
 }

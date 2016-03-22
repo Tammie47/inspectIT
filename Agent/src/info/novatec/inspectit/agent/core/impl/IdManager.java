@@ -2,6 +2,8 @@ package info.novatec.inspectit.agent.core.impl;
 
 import info.novatec.inspectit.agent.config.IConfigurationStorage;
 import info.novatec.inspectit.agent.config.impl.AbstractSensorTypeConfig;
+import info.novatec.inspectit.agent.config.impl.JmxSensorConfig;
+import info.novatec.inspectit.agent.config.impl.JmxSensorTypeConfig;
 import info.novatec.inspectit.agent.config.impl.MethodSensorTypeConfig;
 import info.novatec.inspectit.agent.config.impl.PlatformSensorTypeConfig;
 import info.novatec.inspectit.agent.config.impl.RegisteredSensorConfig;
@@ -12,9 +14,8 @@ import info.novatec.inspectit.agent.connection.ServerUnavailableException;
 import info.novatec.inspectit.agent.core.IIdManager;
 import info.novatec.inspectit.agent.core.IdNotAvailableException;
 import info.novatec.inspectit.spring.logger.Log;
-import info.novatec.inspectit.versioning.IVersioningService;
+import info.novatec.inspectit.version.VersionService;
 
-import java.io.IOException;
 import java.net.ConnectException;
 import java.util.HashMap;
 import java.util.LinkedList;
@@ -51,7 +52,7 @@ public class IdManager implements IIdManager, InitializingBean, DisposableBean {
 	/**
 	 * The versioning service.
 	 */
-	private final IVersioningService versioningService;
+	private final VersionService versionService;
 
 	/**
 	 * The connection to the Central Measurement Repository.
@@ -74,6 +75,11 @@ public class IdManager implements IIdManager, InitializingBean, DisposableBean {
 	private Map<Long, Long> sensorTypeIdMap = new HashMap<Long, Long>();
 
 	/**
+	 * The mapping between the local and remote jmxDefinitionData ids.
+	 */
+	private Map<Long, Long> jmxDefinitionDataIdMap = new HashMap<Long, Long>();
+
+	/**
 	 * The {@link Thread} used to register the outstanding methods, sensor types etc.
 	 */
 	private volatile RegistrationThread registrationThread;
@@ -82,6 +88,11 @@ public class IdManager implements IIdManager, InitializingBean, DisposableBean {
 	 * The methods to register at the server.
 	 */
 	private LinkedList<RegisteredSensorConfig> methodsToRegister = new LinkedList<RegisteredSensorConfig>(); // NOPMD
+
+	/**
+	 * The jmx definition data to register at the server.
+	 */
+	private LinkedList<JmxSensorConfig> jmxDefinitionDataIdentToRegister = new LinkedList<JmxSensorConfig>(); // NOPMD
 
 	/**
 	 * The sensor types to register at the server.
@@ -112,14 +123,14 @@ public class IdManager implements IIdManager, InitializingBean, DisposableBean {
 	 *            The configuration storage.
 	 * @param connection
 	 *            The connection to the server.
-	 * @param versioning
+	 * @param versionService
 	 *            The versioning service.
 	 */
 	@Autowired
-	public IdManager(IConfigurationStorage configurationStorage, IConnection connection, IVersioningService versioning) {
+	public IdManager(IConfigurationStorage configurationStorage, IConnection connection, VersionService versionService) {
 		this.configurationStorage = configurationStorage;
 		this.connection = connection;
-		this.versioningService = versioning;
+		this.versionService = versionService;
 	}
 
 	/**
@@ -140,6 +151,12 @@ public class IdManager implements IIdManager, InitializingBean, DisposableBean {
 		for (PlatformSensorTypeConfig config : configurationStorage.getPlatformSensorTypes()) {
 			this.registerPlatformSensorType(config);
 		}
+
+		// register all jmx sensor types saved in the configuration storage
+		for (JmxSensorTypeConfig config : configurationStorage.getJmxSensorTypes()) {
+			this.registerJmxSensorType(config);
+		}
+
 	}
 
 	/**
@@ -227,7 +244,7 @@ public class IdManager implements IIdManager, InitializingBean, DisposableBean {
 		if (!methodIdMap.containsKey(methodIdentifier)) {
 			throw new IdNotAvailableException("Method ID '" + methodId + "' is not mapped");
 		} else {
-			Long registeredMethodIdentifier = (Long) methodIdMap.get(methodIdentifier);
+			Long registeredMethodIdentifier = methodIdMap.get(methodIdentifier);
 			return registeredMethodIdentifier.longValue();
 		}
 	}
@@ -242,7 +259,22 @@ public class IdManager implements IIdManager, InitializingBean, DisposableBean {
 		if (!sensorTypeIdMap.containsKey(sensorTypeIdentifier)) {
 			throw new IdNotAvailableException("Sensor Type ID '" + sensorTypeId + "' is not mapped");
 		} else {
-			Long registeredSensorTypeIdentifier = (Long) sensorTypeIdMap.get(sensorTypeIdentifier);
+			Long registeredSensorTypeIdentifier = sensorTypeIdMap.get(sensorTypeIdentifier);
+			return registeredSensorTypeIdentifier.longValue();
+		}
+	}
+
+	/**
+	 * {@inheritDoc}
+	 */
+	public long getRegisteredmBeanId(long mBeanId) throws IdNotAvailableException {
+		// same procedure here as in the #getRegisteredMethodId(...) method.
+		Long mBeanIdentifier = Long.valueOf(mBeanId);
+
+		if (!sensorTypeIdMap.containsKey(mBeanIdentifier)) {
+			throw new IdNotAvailableException("mBean '" + mBeanId + "' is not mapped");
+		} else {
+			Long registeredSensorTypeIdentifier = (Long) jmxDefinitionDataIdMap.get(mBeanIdentifier);
 			return registeredSensorTypeIdentifier.longValue();
 		}
 	}
@@ -389,6 +421,76 @@ public class IdManager implements IIdManager, InitializingBean, DisposableBean {
 	}
 
 	/**
+	 * {@inheritDoc}
+	 */
+	public long registerJmxSensorConfig(JmxSensorConfig config) {
+		long id;
+		synchronized (jmxDefinitionDataIdentToRegister) {
+			id = jmxDefinitionDataIdMap.size() + jmxDefinitionDataIdentToRegister.size();
+		}
+		config.setId(id);
+		if (!serverErrorOccured) {
+			try {
+				if (!isPlatformRegistered()) {
+					getPlatformId();
+				}
+
+				registrationThread.registerJmxDefinitionData(config);
+			} catch (Throwable throwable) { // NOPMD
+				synchronized (jmxDefinitionDataIdentToRegister) {
+					jmxDefinitionDataIdentToRegister.addLast(config);
+
+					// start the thread to retry the registration
+					synchronized (registrationThread) {
+						registrationThread.notifyAll();
+					}
+				}
+			}
+		} else {
+			synchronized (jmxDefinitionDataIdentToRegister) {
+				jmxDefinitionDataIdentToRegister.addLast(config);
+			}
+		}
+
+		return id;
+	}
+
+	/**
+	 * {@inheritDoc}
+	 */
+	public long registerJmxSensorType(JmxSensorTypeConfig jmxSensorTypeConfig) {
+		// same procedure here as in #registerMethod(...)
+		long id;
+		synchronized (sensorTypesToRegister) {
+			id = sensorTypeIdMap.size() + sensorTypesToRegister.size();
+		}
+		jmxSensorTypeConfig.setId(id);
+
+		if (!serverErrorOccured) {
+			try {
+				if (!isPlatformRegistered()) {
+					getPlatformId();
+				}
+
+				registrationThread.registerSensorType(jmxSensorTypeConfig);
+			} catch (Throwable throwable) { // NOPMD
+				synchronized (sensorTypesToRegister) {
+					sensorTypesToRegister.addLast(jmxSensorTypeConfig);
+					// start the thread to retry the registration
+					synchronized (registrationThread) {
+						registrationThread.notifyAll();
+					}
+				}
+			}
+		} else {
+			synchronized (sensorTypesToRegister) {
+				sensorTypesToRegister.addLast(jmxSensorTypeConfig);
+			}
+		}
+		return id;
+	}
+
+	/**
 	 * Private inner class used to store the mapping between the sensor type IDs and the method IDs.
 	 * Only used if they are not yet registered.
 	 * 
@@ -454,6 +556,7 @@ public class IdManager implements IIdManager, InitializingBean, DisposableBean {
 		/**
 		 * {@inheritDoc}
 		 */
+		@Override
 		public void run() {
 			Thread thisThread = Thread.currentThread();
 			// break out of the while loop if the registrationThread is set
@@ -494,35 +597,28 @@ public class IdManager implements IIdManager, InitializingBean, DisposableBean {
 				}
 
 				registerMethods();
+				registerJmxDefinitionDataIdents();
 				registerSensorTypes();
 				registerSensorTypeToMethodMapping();
 
 				// clear the flag
 				serverErrorOccured = false;
 			} catch (ServerUnavailableException serverUnavailableException) {
-				if (!serverErrorOccured) {
-					log.error("Server unavailable while trying to register something at the server.");
-				}
-				serverErrorOccured = true;
-				if (log.isTraceEnabled()) {
-					log.trace("run()", serverUnavailableException);
+				if (serverUnavailableException.isServerTimeout()) {
+					log.error("Server timeout while trying to register something at the server.");
+				} else {
+					if (!serverErrorOccured) {
+						log.error("Server unavailable while trying to register something at the server.");
+					}
+					serverErrorOccured = true;
 				}
 			} catch (RegistrationException registrationException) {
-				if (!serverErrorOccured) {
-					log.error("Registration exception occurred while trying to register something at the server.");
-				}
-				serverErrorOccured = true;
-				if (log.isTraceEnabled()) {
-					log.trace("run()", registrationException);
-				}
+				log.error("Registration exception occurred while trying to register something at the server.", registrationException);
 			} catch (ConnectException connectException) {
 				if (!serverErrorOccured) {
-					log.error("Connection to the server failed.");
+					log.error("Connection to the server failed.", connectException);
 				}
 				serverErrorOccured = true;
-				if (log.isTraceEnabled()) {
-					log.trace("run()", connectException);
-				}
 			}
 		}
 
@@ -549,26 +645,10 @@ public class IdManager implements IIdManager, InitializingBean, DisposableBean {
 		 *             appears.
 		 */
 		private void registerPlatform() throws ServerUnavailableException, RegistrationException {
-			platformId = connection.registerPlatform(configurationStorage.getAgentName(), getVersion());
+			platformId = connection.registerPlatform(configurationStorage.getAgentName(), versionService.getVersionAsString());
 
 			if (log.isDebugEnabled()) {
 				log.debug("Received platform ID: " + platformId);
-			}
-		}
-
-		/**
-		 * Returns the formatted version.
-		 * 
-		 * @return the formatted version.
-		 */
-		private String getVersion() {
-			try {
-				return versioningService.getVersion();
-			} catch (IOException e) {
-				if (log.isDebugEnabled()) {
-					log.debug("Version information could not be read", e);
-				}
-				return "n/a";
 			}
 		}
 
@@ -584,7 +664,7 @@ public class IdManager implements IIdManager, InitializingBean, DisposableBean {
 		private void registerSensorTypeToMethodMapping() throws ServerUnavailableException, RegistrationException {
 			while (!sensorTypeToMethodRegister.isEmpty()) {
 				SensorTypeToMethodMapping mapping;
-				mapping = (SensorTypeToMethodMapping) sensorTypeToMethodRegister.getFirst();
+				mapping = sensorTypeToMethodRegister.getFirst();
 
 				Long sensorTypeId = Long.valueOf(mapping.getSensorTypeId());
 				Long methodId = Long.valueOf(mapping.getMethodId());
@@ -618,8 +698,8 @@ public class IdManager implements IIdManager, InitializingBean, DisposableBean {
 				throw new RegistrationException("Method ID could not be found in the map!");
 			}
 
-			Long serverSensorTypeId = (Long) sensorTypeIdMap.get(sensorTypeId);
-			Long serverMethodId = (Long) methodIdMap.get(methodId);
+			Long serverSensorTypeId = sensorTypeIdMap.get(sensorTypeId);
+			Long serverMethodId = methodIdMap.get(methodId);
 
 			connection.addSensorTypeToMethod(serverSensorTypeId.longValue(), serverMethodId.longValue());
 
@@ -664,6 +744,8 @@ public class IdManager implements IIdManager, InitializingBean, DisposableBean {
 			long registeredId;
 			if (astc instanceof MethodSensorTypeConfig) {
 				registeredId = connection.registerMethodSensorType(platformId, (MethodSensorTypeConfig) astc);
+			} else if (astc instanceof JmxSensorTypeConfig) {
+				registeredId = connection.registerJmxSensorType(platformId, (JmxSensorTypeConfig) astc);
 			} else if (astc instanceof PlatformSensorTypeConfig) {
 				registeredId = connection.registerPlatformSensorType(platformId, (PlatformSensorTypeConfig) astc);
 			} else {
@@ -692,7 +774,7 @@ public class IdManager implements IIdManager, InitializingBean, DisposableBean {
 		private void registerMethods() throws ServerUnavailableException, RegistrationException {
 			while (!methodsToRegister.isEmpty()) {
 				RegisteredSensorConfig rsc;
-				rsc = (RegisteredSensorConfig) methodsToRegister.getFirst();
+				rsc = methodsToRegister.getFirst();
 				this.registerMethod(rsc);
 				synchronized (methodsToRegister) {
 					methodsToRegister.removeFirst();
@@ -719,6 +801,48 @@ public class IdManager implements IIdManager, InitializingBean, DisposableBean {
 
 				if (log.isDebugEnabled()) {
 					log.debug("Method " + rsc.toString() + " registered. ID (local/global): " + localId + "/" + registeredId);
+				}
+			}
+		}
+
+		/**
+		 * Registers all jmxDefinitionData on the server.
+		 * 
+		 * @throws ServerUnavailableException
+		 *             Thrown if a server error occurred.
+		 * @throws RegistrationException
+		 *             Thrown if something happened while trying to register the sensor types on the
+		 *             server.
+		 */
+		private void registerJmxDefinitionDataIdents() throws ServerUnavailableException, RegistrationException {
+			while (!jmxDefinitionDataIdentToRegister.isEmpty()) {
+				JmxSensorConfig jsc = (JmxSensorConfig) jmxDefinitionDataIdentToRegister.getFirst();
+				this.registerJmxDefinitionData(jsc);
+				synchronized (jmxDefinitionDataIdentToRegister) {
+					jmxDefinitionDataIdentToRegister.removeFirst();
+				}
+			}
+		}
+
+		/**
+		 * Registers a JmxDefinitionData on the server and maps the local and global id.
+		 * 
+		 * @param config
+		 *            The {@link JmxSensorConfig} to be registered at the server.
+		 * @throws ServerUnavailableException
+		 *             Thrown if a server error occurred.
+		 * @throws RegistrationException
+		 *             Thrown if something happened while trying to register the sensor types on the
+		 *             server.
+		 */
+		private void registerJmxDefinitionData(JmxSensorConfig config) throws ServerUnavailableException, RegistrationException {
+			long registeredId = connection.registerJmxDefinitionData(platformId, config);
+			synchronized (jmxDefinitionDataIdentToRegister) {
+				Long localId = Long.valueOf(jmxDefinitionDataIdMap.size());
+				jmxDefinitionDataIdMap.put(localId, Long.valueOf(registeredId));
+				
+				if (log.isDebugEnabled()) {
+					log.debug("Method " + config.toString() + " registered. ID (local/global): " + localId + "/" + registeredId);
 				}
 			}
 		}

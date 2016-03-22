@@ -7,7 +7,8 @@ import info.novatec.inspectit.indexing.buffer.IBufferTreeComponent;
 import info.novatec.inspectit.indexing.impl.IndexingException;
 import info.novatec.inspectit.spring.logger.Log;
 
-import org.hibernate.StatelessSession;
+import javax.persistence.EntityManager;
+
 import org.slf4j.Logger;
 import org.springframework.beans.factory.annotation.Autowired;
 
@@ -35,7 +36,7 @@ public class IndexerCmrProcessor extends AbstractCmrDataProcessor {
 	 * {@inheritDoc}
 	 */
 	@Override
-	protected void processData(DefaultData defaultData, StatelessSession session) {
+	protected void processData(DefaultData defaultData, EntityManager entityManager) {
 		try {
 			indexingTree.put(defaultData);
 		} catch (IndexingException e) {
@@ -54,6 +55,16 @@ public class IndexerCmrProcessor extends AbstractCmrDataProcessor {
 			return defaultData instanceof InvocationAwareData && ((InvocationAwareData) defaultData).isOnlyFoundInInvocations();
 		}
 		return false;
+	}
+
+	/**
+	 * Sets {@link #indexingTree}.
+	 * 
+	 * @param indexingTree
+	 *            New value for {@link #indexingTree}
+	 */
+	public void setIndexingTree(IBufferTreeComponent<DefaultData> indexingTree) {
+		this.indexingTree = indexingTree;
 	}
 
 }

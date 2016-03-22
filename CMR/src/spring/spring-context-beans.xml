@@ -1,79 +1,61 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<beans xmlns="http://www.springframework.org/schema/beans"
-	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:util="http://www.springframework.org/schema/util"
+<beans xmlns="http://www.springframework.org/schema/beans" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:util="http://www.springframework.org/schema/util"
 	xsi:schemaLocation="
 	http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans-3.1.xsd
 	http://www.springframework.org/schema/util http://www.springframework.org/schema/util/spring-util-3.1.xsd">
 
-	<bean id="indexQueryProvider"
-		class="info.novatec.inspectit.indexing.query.provider.impl.IndexQueryProvider">
+	<bean id="indexQueryProvider" class="info.novatec.inspectit.indexing.query.provider.impl.IndexQueryProvider">
 		<lookup-method name="createNewIndexQuery" bean="indexQuery" />
 	</bean>
 
-	<bean id="storageIndexQueryProvider"
-		class="info.novatec.inspectit.indexing.query.provider.impl.StorageIndexQueryProvider">
+	<bean id="storageIndexQueryProvider" class="info.novatec.inspectit.indexing.query.provider.impl.StorageIndexQueryProvider">
 		<lookup-method name="createNewStorageIndexQuery" bean="storageIndexQuery" />
 	</bean>
-
-	<bean id="streamProvider"
-		class="info.novatec.inspectit.storage.nio.stream.StreamProvider">
-		<lookup-method name="createExtendedByteBufferOutputStream"
-			bean="extendedByteBufferOutputStream" />
-		<lookup-method name="createSocketExtendedByteBufferInputStream"
-			bean="socketExtendedByteBufferInputStream" />
+	
+	<bean id="streamProvider" class="info.novatec.inspectit.storage.nio.stream.StreamProvider">
+		<lookup-method name="createExtendedByteBufferOutputStream" bean="extendedByteBufferOutputStream" />
+		<lookup-method name="createSocketExtendedByteBufferInputStream" bean="socketExtendedByteBufferInputStream" />
+	</bean>
+	
+	<bean id="inputStreamProvider" class="info.novatec.inspectit.storage.nio.stream.InputStreamProvider">
+		<lookup-method name="createExtendedByteBufferInputStream" bean="extendedByteBufferInputStream" />
 	</bean>
 
-	<bean id="inputStreamProvider"
-		class="info.novatec.inspectit.storage.nio.stream.InputStreamProvider">
-		<lookup-method name="createExtendedByteBufferInputStream"
-			bean="extendedByteBufferInputStream" />
-	</bean>
-
-	<bean id="serializationManagerProvider"
-		class="info.novatec.inspectit.storage.serializer.provider.SerializationManagerProvider">
+	<bean id="serializationManagerProvider" class="info.novatec.inspectit.storage.serializer.provider.SerializationManagerProvider">
 		<lookup-method name="createSerializer" bean="serializationManager" />
 	</bean>
 
-	<bean id="storageWriterProvider"
-		class="info.novatec.inspectit.cmr.storage.CmrStorageWriterProvider">
+	<bean id="storageWriterProvider" class="info.novatec.inspectit.cmr.storage.CmrStorageWriterProvider">
 		<lookup-method name="getCmrStorageWriter" bean="cmrStorageWriter" />
 	</bean>
 
-	<bean id="storageIndexingTreeProvider"
-		class="info.novatec.inspectit.storage.util.StorageIndexTreeProvider">
+	<bean id="storageIndexingTreeProvider" class="info.novatec.inspectit.storage.util.StorageIndexTreeProvider">
 		<lookup-method name="getStorageIndexingTree" bean="storageRootBranchFactory" />
 	</bean>
 
-	<bean id="versioning"
-		class="info.novatec.inspectit.versioning.FileBasedVersioningServiceImpl" />
-
-	<bean id="IOExecutorService"
-		class="info.novatec.inspectit.storage.util.ExecutorServiceFactory">
+	<bean id="IOExecutorService" class="info.novatec.inspectit.storage.util.ExecutorServiceFactory">
 		<property name="threadNamePrefix" value="io-executor-service" />
 		<property name="daemon" value="true" />
 		<property name="executorThreads" value="${storage.ioExecutorThreads}" />
 		<property name="beanSingleton" value="true" />
 	</bean>
 
-	<bean id="storageExecutorService"
-		class="info.novatec.inspectit.storage.util.ExecutorServiceFactory">
+	<bean id="storageExecutorService" class="info.novatec.inspectit.storage.util.ExecutorServiceFactory">
 		<property name="threadNamePrefix" value="storage-executor-service" />
 		<property name="daemon" value="false" />
 		<property name="executorThreads" value="${storage.storageExecutorThreads}" />
 		<property name="scheduledExecutor" value="true" />
 	</bean>
 
-	<bean id="scheduledExecutorService"
-		class="info.novatec.inspectit.storage.util.ExecutorServiceFactory">
+	<bean id="scheduledExecutorService" class="info.novatec.inspectit.storage.util.ExecutorServiceFactory">
 		<property name="threadNamePrefix" value="scheduled-executor-service" />
 		<property name="daemon" value="true" />
 		<property name="executorThreads" value="5" />
 		<property name="scheduledExecutor" value="true" />
 		<property name="beanSingleton" value="true" />
 	</bean>
-
-	<bean id="socketReadExecutorService"
-		class="info.novatec.inspectit.storage.util.ExecutorServiceFactory">
+	
+	<bean id="socketReadExecutorService" class="info.novatec.inspectit.storage.util.ExecutorServiceFactory">
 		<property name="threadNamePrefix" value="socket-read-executor-service" />
 		<property name="daemon" value="true" />
 		<property name="executorThreads" value="2" />
@@ -81,8 +63,7 @@
 		<property name="beanSingleton" value="true" />
 	</bean>
 
-	<bean id="kryoNetObjectSpaceExecutorService"
-		class="info.novatec.inspectit.storage.util.ExecutorServiceFactory">
+	<bean id="kryoNetObjectSpaceExecutorService" class="info.novatec.inspectit.storage.util.ExecutorServiceFactory">
 		<property name="threadNamePrefix" value="kryo-net-object-space-executor-service" />
 		<property name="daemon" value="true" />
 		<property name="executorThreads" value="3" />
@@ -90,17 +71,20 @@
 		<property name="beanSingleton" value="true" />
 	</bean>
 
-	<!--bean id="SecurityInitialization" class="info.novatec.inspectit.cmr.security.SecurityInitialization" />
+	<bean id="forkJoinWorkerThreadFactory" class="info.novatec.inspectit.indexing.util.ForkJoinPoolWorkerThreadFactoryFactory">
+		<property name="threadNamePrefix" value="indexingTreeForkJoinThread" />
+	</bean>
 	
-	<bean id="cmrSecurityManager" class="info.novatec.inspectit.cmr.security.CmrSecurityManager" />
-	
-	<bean id="cmrRealm" class="info.novatec.inspectit.cmr.security.CmrRealm" /-->
+	<bean id="indexingTreeForkJoinPool" class="org.springframework.scheduling.concurrent.ForkJoinPoolFactoryBean">
+		<property name="threadFactory" ref="forkJoinWorkerThreadFactory" />
+		<property name="uncaughtExceptionHandler" ref="forkJoinPoolExceptionHandler" />
+	</bean>
 	
 	<!-- SHIRO SETTINGS -->
 	<bean id="SecurityInitialization" class="info.novatec.inspectit.cmr.security.SecurityInitialization" />
 	
 	<bean id="cmrRealm" class="info.novatec.inspectit.cmr.security.CmrRealm" />
-	
+
 	<bean id="sessionManager" class="org.apache.shiro.web.session.mgt.DefaultWebSessionManager" />
 	
 	<bean id="cmrSecurityManager" class="info.novatec.inspectit.cmr.security.CmrSecurityManager">
@@ -109,14 +93,7 @@
 	</bean>
 	
 	<bean id="lifecycleBeanPostProcessor" class="org.apache.shiro.spring.LifecycleBeanPostProcessor" />
-	
-	<!-- Enable Shiro Annotations for Spring-configured beans.  Only run after -->
-	<!-- the lifecycleBeanProcessor has run: -->
-	<bean class="org.springframework.aop.framework.autoproxy.DefaultAdvisorAutoProxyCreator" depends-on="lifecycleBeanPostProcessor"/>
-	<bean class="org.apache.shiro.spring.security.interceptor.AuthorizationAttributeSourceAdvisor">
-    	<property name="securityManager" ref="cmrSecurityManager"/>
-	</bean>
-	
+		
 	<!-- Secure Spring remoting:  Ensure any Spring Remoting method invocations -->
 	<!-- can be associated with a Subject for security checks. -->
 	<bean id="secureRemoteInvocationExecutor" class="org.apache.shiro.spring.remoting.SecureRemoteInvocationExecutor">

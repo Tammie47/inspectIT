@@ -1,10 +1,14 @@
 package info.novatec.inspectit.cmr.service;
 
+import info.novatec.inspectit.cmr.dao.JmxDefinitionDataIdentDao;
+import info.novatec.inspectit.cmr.dao.JmxSensorTypeIdentDao;
 import info.novatec.inspectit.cmr.dao.MethodIdentDao;
 import info.novatec.inspectit.cmr.dao.MethodIdentToSensorTypeDao;
 import info.novatec.inspectit.cmr.dao.MethodSensorTypeIdentDao;
 import info.novatec.inspectit.cmr.dao.PlatformIdentDao;
 import info.novatec.inspectit.cmr.dao.PlatformSensorTypeIdentDao;
+import info.novatec.inspectit.cmr.model.JmxDefinitionDataIdent;
+import info.novatec.inspectit.cmr.model.JmxSensorTypeIdent;
 import info.novatec.inspectit.cmr.model.MethodIdent;
 import info.novatec.inspectit.cmr.model.MethodIdentToSensorType;
 import info.novatec.inspectit.cmr.model.MethodSensorTypeIdent;
@@ -37,11 +41,12 @@ import org.springframework.transaction.annotation.Transactional;
  * This class is used as a delegator to the real registration service. It is needed because Spring
  * weaves a proxy around the real registration service which cannot be used in an RMI context with
  * Java 1.4 (as no pre-generated stub is available).
- * 
+ *
  * @author Patrice Bouillet
- * 
+ *
  */
 @Service
+@Transactional
 public class RegistrationService implements IRegistrationService {
 
 	/** The logger of this class. */
@@ -59,6 +64,12 @@ public class RegistrationService implements IRegistrationService {
 	 */
 	@Autowired
 	PlatformIdentDao platformIdentDao;
+
+	/**
+	 * The jmx definition data ident DAO.
+	 */
+	@Autowired
+	JmxDefinitionDataIdentDao jmxDefinitionDataIdentDao;
 
 	/**
 	 * The method ident DAO.
@@ -79,6 +90,12 @@ public class RegistrationService implements IRegistrationService {
 	PlatformSensorTypeIdentDao platformSensorTypeIdentDao;
 
 	/**
+	 * The jmx sensor type ident DAO.
+	 */
+	@Autowired
+	JmxSensorTypeIdentDao jmxSensorTypeIdentDao;
+
+	/**
 	 * The method ident to sensor type DAO.
 	 */
 	@Autowired
@@ -93,33 +110,30 @@ public class RegistrationService implements IRegistrationService {
 	/**
 	 * {@inheritDoc}
 	 */
-	@Transactional
+	@Override
 	@MethodLog
 	public synchronized long registerPlatformIdent(List<String> definedIPs, String agentName, String version) throws BusinessException {
 		if (log.isInfoEnabled()) {
 			log.info("Trying to register Agent '" + agentName + "'");
 		}
 
-		PlatformIdent platformIdent = new PlatformIdent();
+		// find existing registered
+		List<PlatformIdent> platformIdentResults;
 		if (ipBasedAgentRegistration) {
-			platformIdent.setDefinedIPs(definedIPs);
+			platformIdentResults = platformIdentDao.findByNameAndIps(agentName, definedIPs);
+		} else {
+			platformIdentResults = platformIdentDao.findByName(agentName);
 		}
+
+		PlatformIdent platformIdent = new PlatformIdent();
 		platformIdent.setAgentName(agentName);
-
-		// need to reset the version number, otherwise it will be used for the query
-		platformIdent.setVersion(null);
-
-		// we will not set the version for the platformIdent object here as we use this object
-		// for a QBE (Query by example) and this query should not be performed based on the
-		// version information.
-
-		List<PlatformIdent> platformIdentResults = platformIdentDao.findByExample(platformIdent);
 		if (1 == platformIdentResults.size()) {
 			platformIdent = platformIdentResults.get(0);
 		} else if (platformIdentResults.size() > 1) {
 			// this cannot occur anymore, if it occurs, then there is something totally wrong!
 			log.error("More than one platform ident has been retrieved! Please send your Database to the NovaTec inspectIT support!");
-			throw new BusinessException("Register the agent with name " + agentName + " and following network interfaces " + definedIPs + ".", AgentManagementErrorCodeEnum.MORE_THAN_ONE_AGENT_REGISTERED);
+			throw new BusinessException("Register the agent with name " + agentName + " and following network interfaces " + definedIPs + ".",
+					AgentManagementErrorCodeEnum.MORE_THAN_ONE_AGENT_REGISTERED);
 		}
 
 		// always update the time stamp and ips, no matter if this is an old or new record.
@@ -142,25 +156,19 @@ public class RegistrationService implements IRegistrationService {
 
 	/**
 	 * {@inheritDoc}
-	 * 
+	 *
 	 * @throws BusinessException
 	 */
-	@Transactional
+	@Override
 	@MethodLog
 	public void unregisterPlatformIdent(List<String> definedIPs, String agentName) throws BusinessException {
 		log.info("Trying to unregister the Agent with following network interfaces:");
 		printOutDefinedIPs(definedIPs);
 
-		PlatformIdent platformIdent = new PlatformIdent();
-		platformIdent.setDefinedIPs(definedIPs);
-		platformIdent.setAgentName(agentName);
+		List<PlatformIdent> platformIdentResults = platformIdentDao.findByNameAndIps(agentName, definedIPs);
 
-		// need to reset the version number, otherwise it will be used for the query
-		platformIdent.setVersion(null);
-
-		List<PlatformIdent> platformIdentResults = platformIdentDao.findByExample(platformIdent);
 		if (1 == platformIdentResults.size()) {
-			platformIdent = platformIdentResults.get(0);
+			PlatformIdent platformIdent = platformIdentResults.get(0);
 			agentStatusDataProvider.registerDisconnected(platformIdent.getId());
 			log.info("The Agent '" + platformIdent.getAgentName() + "' has been successfully unregistered.");
 		} else if (platformIdentResults.size() > 1) {
@@ -177,7 +185,7 @@ public class RegistrationService implements IRegistrationService {
 	/**
 	 * {@inheritDoc}
 	 */
-	@Transactional
+	@Override
 	@MethodLog
 	public long registerMethodIdent(long platformId, String packageName, String className, String methodName, List<String> parameterTypes, String returnType, int modifiers) {
 		MethodIdent methodIdent = new MethodIdent();
@@ -191,7 +199,7 @@ public class RegistrationService implements IRegistrationService {
 		methodIdent.setReturnType(returnType);
 		methodIdent.setModifiers(modifiers);
 
-		List<MethodIdent> methodIdents = methodIdentDao.findForPlatformIdent(platformId, methodIdent);
+		List<MethodIdent> methodIdents = methodIdentDao.findForPlatformIdAndExample(platformId, methodIdent);
 		if (1 == methodIdents.size()) {
 			methodIdent = methodIdents.get(0);
 		} else {
@@ -211,36 +219,40 @@ public class RegistrationService implements IRegistrationService {
 	/**
 	 * {@inheritDoc}
 	 */
-	@Transactional
+	@Override
 	@MethodLog
 	public long registerMethodSensorTypeIdent(long platformId, String fullyQualifiedClassName, Map<String, Object> parameters) {
-		MethodSensorTypeIdent methodSensorTypeIdent = new MethodSensorTypeIdent();
-		methodSensorTypeIdent.setFullyQualifiedClassName(fullyQualifiedClassName);
+		MethodSensorTypeIdent methodSensorTypeIdent;
 
-		List<MethodSensorTypeIdent> methodSensorTypeIdents = methodSensorTypeIdentDao.findByExample(platformId, methodSensorTypeIdent);
+		List<MethodSensorTypeIdent> methodSensorTypeIdents = methodSensorTypeIdentDao.findByClassNameAndPlatformId(fullyQualifiedClassName, platformId);
 		if (1 == methodSensorTypeIdents.size()) {
 			methodSensorTypeIdent = methodSensorTypeIdents.get(0);
+
+			// update preferences
+			methodSensorTypeIdent.setSettings(parameters);
+			methodSensorTypeIdentDao.saveOrUpdate(methodSensorTypeIdent);
 		} else {
-			// only if the new sensor is register we need to update the platform ident
+			// only if the new sensor is registered we need to update the platform ident
 			PlatformIdent platformIdent = platformIdentDao.load(platformId);
+			methodSensorTypeIdent = new MethodSensorTypeIdent();
 			methodSensorTypeIdent.setPlatformIdent(platformIdent);
+			methodSensorTypeIdent.setFullyQualifiedClassName(fullyQualifiedClassName);
+			methodSensorTypeIdent.setSettings(parameters);
 
 			Set<SensorTypeIdent> sensorTypeIdents = platformIdent.getSensorTypeIdents();
 			sensorTypeIdents.add(methodSensorTypeIdent);
 
+			methodSensorTypeIdentDao.saveOrUpdate(methodSensorTypeIdent);
 			platformIdentDao.saveOrUpdate(platformIdent);
 		}
 
-		methodSensorTypeIdent.setSettings(parameters);
-
-		methodSensorTypeIdentDao.saveOrUpdate(methodSensorTypeIdent);
 		return methodSensorTypeIdent.getId();
 	}
 
 	/**
 	 * {@inheritDoc}
 	 */
-	@Transactional
+	@Override
 	@MethodLog
 	public void addSensorTypeToMethod(long methodSensorTypeId, long methodId) {
 		MethodIdentToSensorType methodIdentToSensorType = methodIdentToSensorTypeDao.find(methodId, methodSensorTypeId);
@@ -259,20 +271,19 @@ public class RegistrationService implements IRegistrationService {
 	/**
 	 * {@inheritDoc}
 	 */
-	@Transactional
+	@Override
 	@MethodLog
 	public long registerPlatformSensorTypeIdent(long platformId, String fullyQualifiedClassName) {
-		PlatformSensorTypeIdent platformSensorTypeIdent = new PlatformSensorTypeIdent();
-		platformSensorTypeIdent.setFullyQualifiedClassName(fullyQualifiedClassName);
-
-		List<PlatformSensorTypeIdent> platformSensorTypeIdents = platformSensorTypeIdentDao.findByExample(platformId, platformSensorTypeIdent);
-		PlatformIdent platformIdent;
+		PlatformSensorTypeIdent platformSensorTypeIdent;
+		List<PlatformSensorTypeIdent> platformSensorTypeIdents = platformSensorTypeIdentDao.findByClassNameAndPlatformId(fullyQualifiedClassName, platformId);
 		if (1 == platformSensorTypeIdents.size()) {
 			platformSensorTypeIdent = platformSensorTypeIdents.get(0);
 		} else {
 			// only if it s not registered we need updating
-			platformIdent = platformIdentDao.load(platformId);
+			PlatformIdent platformIdent = platformIdentDao.load(platformId);
+			platformSensorTypeIdent = new PlatformSensorTypeIdent();
 			platformSensorTypeIdent.setPlatformIdent(platformIdent);
+			platformSensorTypeIdent.setFullyQualifiedClassName(fullyQualifiedClassName);
 
 			Set<SensorTypeIdent> sensorTypeIdents = platformIdent.getSensorTypeIdents();
 			sensorTypeIdents.add(platformSensorTypeIdent);
@@ -285,13 +296,70 @@ public class RegistrationService implements IRegistrationService {
 	}
 
 	/**
+	 * {@inheritDoc}
+	 */
+	@Override
+	@Transactional
+	@MethodLog
+	public long registerJmxSensorTypeIdent(long platformId, String fullyQualifiedClassName) {
+		JmxSensorTypeIdent jmxSensorTypeIdent = new JmxSensorTypeIdent();
+		jmxSensorTypeIdent.setFullyQualifiedClassName(fullyQualifiedClassName);
+
+		List<JmxSensorTypeIdent> jmxSensorTypeIdents = jmxSensorTypeIdentDao.findByExample(platformId, jmxSensorTypeIdent);
+		if (1 == jmxSensorTypeIdents.size()) {
+			jmxSensorTypeIdent = jmxSensorTypeIdents.get(0);
+		} else {
+			PlatformIdent platformIdent = platformIdentDao.load(platformId);
+			jmxSensorTypeIdent.setPlatformIdent(platformIdent);
+
+			Set<SensorTypeIdent> sensorTypeIdents = platformIdent.getSensorTypeIdents();
+			sensorTypeIdents.add(jmxSensorTypeIdent);
+
+			jmxSensorTypeIdentDao.saveOrUpdate(jmxSensorTypeIdent);
+			platformIdentDao.saveOrUpdate(platformIdent);
+		}
+
+		return jmxSensorTypeIdent.getId();
+	}
+
+	/**
+	 * {@inheritDoc}
+	 */
+	@Transactional
+	@MethodLog
+	public long registerJmxSensorDefinitionDataIdent(long platformId, String mBeanObjectName, String mBeanAttributeName, String mBeanAttributeDescription, String mBeanAttributeType, boolean isIs, // NOCHK
+			boolean isReadable, boolean isWritable) {
+		JmxDefinitionDataIdent jmxDefinitionDataIdent = new JmxDefinitionDataIdent();
+		jmxDefinitionDataIdent.setmBeanObjectName(mBeanObjectName);
+		jmxDefinitionDataIdent.setmBeanAttributeName(mBeanAttributeName);
+		jmxDefinitionDataIdent.setmBeanAttributeDescription(mBeanAttributeDescription);
+		jmxDefinitionDataIdent.setmBeanAttributeType(mBeanAttributeType);
+		jmxDefinitionDataIdent.setmBeanAttributeIsIs(isIs);
+		jmxDefinitionDataIdent.setmBeanAttributeIsReadable(isReadable);
+		jmxDefinitionDataIdent.setmBeanAttributeIsWritable(isWritable);
+
+		List<JmxDefinitionDataIdent> jmxDefinitionDataIdents = jmxDefinitionDataIdentDao.findForPlatformIdent(platformId, jmxDefinitionDataIdent);
+		if (1 == jmxDefinitionDataIdents.size()) {
+			jmxDefinitionDataIdent = jmxDefinitionDataIdents.get(0);
+		} else {
+			PlatformIdent platformIdent = platformIdentDao.load(Long.valueOf(platformId));
+			jmxDefinitionDataIdent.setPlatformIdent(platformIdent);
+		}
+
+		jmxDefinitionDataIdent.setTimeStamp(new Timestamp(GregorianCalendar.getInstance().getTimeInMillis()));
+
+		jmxDefinitionDataIdentDao.saveOrUpdate(jmxDefinitionDataIdent);
+		return jmxDefinitionDataIdent.getId();
+	}
+
+	/**
 	 * Prints out the given list of defined IP addresses. The example is:
 	 * <p>
 	 * |- IPv4: 192.168.1.6<br>
 	 * |- IPv4: 127.0.0.1<br>
 	 * |- IPv6: fe80:0:0:0:221:5cff:fe1d:ffdf%3<br>
 	 * |- IPv6: 0:0:0:0:0:0:0:1%1
-	 * 
+	 *
 	 * @param definedIPs
 	 *            List of IPv4 and IPv6 IPs.
 	 */
@@ -320,5 +388,4 @@ public class RegistrationService implements IRegistrationService {
 			log.info("|-Registration Service active...");
 		}
 	}
-
 }

@@ -64,7 +64,7 @@
 			<path refid="lib.prod.commonscs" />
 		</path>
 
-		<javac source="1.7" target="1.7" debug="true" debuglevel="lines,vars,source" destdir="${build.cmr.classes}" srcdir="${src.root}" classpathref="compile.classpath" includeAntRuntime="no" />
+		<javac source="1.7" target="1.7" debug="true" debuglevel="lines,vars,source" destdir="${build.cmr.classes}" srcdir="${src.root}" classpathref="compile.classpath" includeAntRuntime="no" encoding="utf-8" />
 	</target>
 
 
@@ -125,6 +125,35 @@
 				<fileset refid="test.classes-to-instrument" />
 			</test.classes-to-instrument>
 		</execute-testng>
+	</target>
+	
+	
+	<target name="perf-tests" depends="build,init-perf-tests">
+			<path id="perftest.compile.classpath">
+				<pathelement location="${build.cmr.classes}" />
+				<fileset dir="${commons.build.release}" includes="*.jar" />
+				<fileset dir="${commonscs.build.release}" includes="*.jar" />
+				<path refid="lib.prod" />
+				<path refid="lib.prod.commons" />
+				<path refid="lib.prod.commonscs" />
+			</path>
+
+			<property name="perftest.javac.source" value="1.7"/>
+			<property name="perftest.javac.target" value="1.7"/>
+		
+			<execute-perf-tests 
+				perftest.root="${perftest.root}"
+				perftest.javac.source="${perftest.javac.source}" 
+				perftest.javac.target="${perftest.javac.target}"
+				build.perftest.classes="${build.perftest.classes}">
+				
+				<perftest.compile.classpath>
+					<classpath>
+						<path refid="perftest.compile.classpath"/>
+					</classpath>
+				</perftest.compile.classpath>
+		
+			</execute-perf-tests>
 	</target>
 
 
@@ -240,6 +269,9 @@
 		
 		<!-- Create empty logs dir -->
 		<mkdir dir="${build.release.root.cmr}/logs"/>
+		
+		<copydir dest="${build.release.root.cmr}/ci/profiles/common" src="${basedir}/ci/profiles/common"/>
+		<copydir dest="${build.release.root.cmr}/ci/schema" src="${basedir}/ci/schema"/>
 
 		<!-- Create the different distributions -->
 		<antcall target="-retrieve-jre-installations" />
@@ -247,6 +279,7 @@
 		<antcall target="-linux-x64" />
 		<antcall target="-windows-x86" />
 		<antcall target="-windows-x64" />
+		<antcall target="-macosx-x64" />
 	</target>
 
 	<!-- Calls the release target and then the analysis targets -->
@@ -304,32 +337,56 @@
 		<delete file="${build.scripts}/startup.bat" failonerror="false" />
 	</target>
 
-	<target name="generate-configuration-xsd-schema" depends="init,init-jaxb-schemagen">
+	<target name="-macosx-x64">
+		<copy file="${basedir}/startup.sh" tofile="${build.scripts}/startup.sh"/>
+		<replaceregexp file="${build.scripts}/startup.sh" match="#COMMAND#" replace="${cmr.java.command.linux} ${cmr.java.memory.64bit} ${cmr.java.opts.64bit} ${cmr.java.opts.linux} ${cmr.java.locgc.linux} -jar ${dist.jar.name}" byline="true"/>
+		<tar destfile="${release.root}/inspectit-cmr.macosx.x64.tar.gz" compression="gzip">
+			<fileset dir="${build.release.root}" />
+			<tarfileset file="${build.scripts}/startup.sh" prefix="CMR" filemode="755" />
+			<zipfileset src="${jvm.root}/jre7-macosx-x64.zip" prefix="CMR/jre" filemode="755" />
+			<zipfileset dir="${basedir}/../" prefix="CMR" includes="*LICENSE*.txt" />
+		</tar>
+		<delete file="${build.scripts}/startup.sh" failonerror="false" />
+	</target>
+
+	<target name="generate-configuration-xsd-schema" depends="init,init-jaxb-schemagen,release-commonscs">
 		<jaxb-schemagen jaxb-schemagen.src="${src.commonscs}/info/novatec/inspectit/cmr/property/configuration" jaxb-schemagen.dest="${basedir}/config/schema" jaxb-schemagen.excludes="validation/**" jaxb-schemagen.schemafilename="configurationSchema.xsd">
 			<jaxb-schemagen.classpath>
+				<path refid="lib.prod.commons" />
 				<path refid="lib.prod.commonscs" />
+				<pathelement path="${build.commons.classes}" />
+				<pathelement path="${build.commonscs.classes}" />
 			</jaxb-schemagen.classpath>
 		</jaxb-schemagen>
 		<jaxb-schemagen jaxb-schemagen.src="${src.commonscs}/info/novatec/inspectit/cmr/property/update" jaxb-schemagen.dest="${basedir}/config/schema" jaxb-schemagen.excludes="" jaxb-schemagen.schemafilename="configurationUpdateSchema.xsd">
 			<jaxb-schemagen.classpath>
+				<path refid="lib.prod.commons" />
 				<path refid="lib.prod.commonscs" />
+				<pathelement path="${build.commons.classes}" />
+				<pathelement path="${build.commonscs.classes}" />
 			</jaxb-schemagen.classpath>
 		</jaxb-schemagen>
 	</target>
 
-	<target name="check-for-xsd-schema-correctness" depends="init,init-jaxb-schemagen">
+	<target name="check-for-xsd-schema-correctness" depends="init,init-jaxb-schemagen,release-commonscs">
 		<property name="build.configTempDir" value="${build.root}/temp/config/schema" />
 		<mkdir dir="${build.configTempDir}" />
 
 		<!-- Build temp schema files -->
 		<jaxb-schemagen jaxb-schemagen.src="${src.commonscs}/info/novatec/inspectit/cmr/property/configuration" jaxb-schemagen.dest="${build.configTempDir}" jaxb-schemagen.excludes="validation/**" jaxb-schemagen.schemafilename="configurationSchema.xsd">
 			<jaxb-schemagen.classpath>
+				<path refid="lib.prod.commons" />
 				<path refid="lib.prod.commonscs" />
+				<pathelement path="${build.commons.classes}" />
+				<pathelement path="${build.commonscs.classes}" />
 			</jaxb-schemagen.classpath>
 		</jaxb-schemagen>
 		<jaxb-schemagen jaxb-schemagen.src="${src.commonscs}/info/novatec/inspectit/cmr/property/update" jaxb-schemagen.dest="${build.configTempDir}" jaxb-schemagen.excludes="" jaxb-schemagen.schemafilename="configurationUpdateSchema.xsd">
 			<jaxb-schemagen.classpath>
+				<path refid="lib.prod.commons" />
 				<path refid="lib.prod.commonscs" />
+				<pathelement path="${build.commons.classes}" />
+				<pathelement path="${build.commonscs.classes}" />
 			</jaxb-schemagen.classpath>
 		</jaxb-schemagen>
 
@@ -344,6 +401,14 @@
 
 		<delete dir="${build.configTempDir}" />
 		<fail if="${xsd-schema.notcorrect}"/>
+	</target>
+	
+	<target name="generate-ci-xsd-schema" depends="init,init-jaxb-schemagen">
+		<jaxb-schemagen jaxb-schemagen.src="${src.commonscs}/info/novatec/inspectit/ci" jaxb-schemagen.dest="${basedir}/ci/schema" jaxb-schemagen.excludes="" jaxb-schemagen.schemafilename="ciSchema.xsd">
+			<jaxb-schemagen.classpath>
+				<path refid="lib.prod.commonscs" />
+			</jaxb-schemagen.classpath>
+		</jaxb-schemagen>
 	</target>
 
 	<!-- *************************************************************** -->

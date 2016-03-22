@@ -1,5 +1,6 @@
 package info.novatec.inspectit.rcp.editor.search.factory;
 
+import info.novatec.inspectit.cmr.model.JmxDefinitionDataIdent;
 import info.novatec.inspectit.cmr.model.MethodIdent;
 import info.novatec.inspectit.communication.data.AggregatedExceptionSensorData;
 import info.novatec.inspectit.communication.data.AggregatedHttpTimerData;
@@ -8,9 +9,11 @@ import info.novatec.inspectit.communication.data.AggregatedTimerData;
 import info.novatec.inspectit.communication.data.ExceptionSensorData;
 import info.novatec.inspectit.communication.data.HttpTimerData;
 import info.novatec.inspectit.communication.data.InvocationSequenceData;
+import info.novatec.inspectit.communication.data.JmxSensorValueData;
 import info.novatec.inspectit.communication.data.SqlStatementData;
 import info.novatec.inspectit.communication.data.TimerData;
 import info.novatec.inspectit.rcp.editor.search.criteria.SearchCriteria;
+import info.novatec.inspectit.rcp.formatter.NumberFormatter;
 import info.novatec.inspectit.rcp.repository.RepositoryDefinition;
 
 import java.util.Map;
@@ -52,6 +55,11 @@ public final class SearchFactory {
 	private static InvocationSearchFinder invocationSearchFinder = new InvocationSearchFinder();
 
 	/**
+	 * Search finder for {@link JmxSearchFinder}.
+	 */
+	private static JmxSearchFinder jmxSearchFinder = new JmxSearchFinder();
+
+	/**
 	 * Private constructor.
 	 */
 	private SearchFactory() {
@@ -85,6 +93,8 @@ public final class SearchFactory {
 			return exceptionSearchFinder.isSearchCompatible((ExceptionSensorData) element, searchCriteria, repositoryDefinition);
 		} else if (InvocationSequenceData.class.equals(element.getClass())) {
 			return invocationSearchFinder.isSearchCompatible((InvocationSequenceData) element, searchCriteria, repositoryDefinition);
+		} else if (JmxSensorValueData.class.equals(element.getClass())) {
+			return jmxSearchFinder.isSearchCompatible((JmxSensorValueData) element, searchCriteria, repositoryDefinition);
 		}
 		return false;
 	}
@@ -163,6 +173,37 @@ public final class SearchFactory {
 	}
 
 	/**
+	 * Search finder for {@link JmxSensorValueData}.
+	 * 
+	 * @author Marius Oehler
+	 * 
+	 */
+	private static class JmxSearchFinder extends AbstractSearchFinder<JmxSensorValueData> {
+
+		/**
+		 * {@inheritDoc}
+		 */
+		@Override
+		public boolean isSearchCompatible(JmxSensorValueData element, SearchCriteria searchCriteria, RepositoryDefinition repositoryDefinition) {
+			if (stringMatches(element.getValue(), searchCriteria)) {
+				return true;
+			} else if (stringMatches(NumberFormatter.formatTime(element.getTimeStamp()), searchCriteria)) {
+				return true;
+			}
+
+			JmxDefinitionDataIdent jmxIdent = repositoryDefinition.getCachedDataService().getJmxDefinitionDataIdentForId(element.getJmxSensorDefinitionDataIdentId());
+
+			if (jmxIdent == null) {
+				return false;
+			} else if (stringMatches(jmxIdent.getDerivedFullName(), searchCriteria)) {
+				return true;
+			}
+
+			return false;
+		}
+	}
+
+	/**
 	 * Search finder for {@link TimerData}.
 	 * 
 	 * @author Ivan Senic
@@ -223,11 +264,11 @@ public final class SearchFactory {
 
 		@Override
 		public boolean isSearchCompatible(HttpTimerData element, SearchCriteria searchCriteria, RepositoryDefinition repositoryDefinition) {
-			if (stringMatches(element.getInspectItTaggingHeaderValue(), searchCriteria)) {
+			if (stringMatches(element.getHttpInfo().getInspectItTaggingHeaderValue(), searchCriteria)) {
 				return true;
-			} else if (stringMatches(element.getRequestMethod(), searchCriteria)) {
+			} else if (stringMatches(element.getHttpInfo().getRequestMethod(), searchCriteria)) {
 				return true;
-			} else if (stringMatches(element.getUri(), searchCriteria)) {
+			} else if (stringMatches(element.getHttpInfo().getUri(), searchCriteria)) {
 				return true;
 			} else {
 				if (MapUtils.isNotEmpty(element.getAttributes())) {

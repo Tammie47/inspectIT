@@ -1,5 +1,7 @@
 package info.novatec.inspectit.agent.connection;
 
+import info.novatec.inspectit.agent.config.impl.JmxSensorConfig;
+import info.novatec.inspectit.agent.config.impl.JmxSensorTypeConfig;
 import info.novatec.inspectit.agent.config.impl.MethodSensorTypeConfig;
 import info.novatec.inspectit.agent.config.impl.PlatformSensorTypeConfig;
 import info.novatec.inspectit.agent.config.impl.RegisteredSensorConfig;
@@ -41,13 +43,22 @@ public interface IConnection {
 	boolean isConnected();
 
 	/**
+	 * Sends a keep-alive signal to give a sign of life.
+	 * 
+	 * @param platformId
+	 *            The unique id for this platform.
+	 * @throws ServerUnavailableException
+	 *             If server to send the request to is unavailable.
+	 */
+	void sendKeepAlive(long platformId) throws ServerUnavailableException;
+
+	/**
 	 * Send the measurements to the server for further processing.
 	 * 
 	 * @param dataObjects
 	 *            The measurements to send.
 	 * @throws ServerUnavailableException
-	 *             If the sending wasn't successful in any way, a {@link ServerUnavailableException}
-	 *             exception is thrown.
+	 *             If server to send the request to is unavailable.
 	 */
 	void sendDataObjects(List<? extends DefaultData> dataObjects) throws ServerUnavailableException;
 
@@ -61,8 +72,7 @@ public interface IConnection {
 	 *            The version of the agent.
 	 * @return The unique id for this platform.
 	 * @throws ServerUnavailableException
-	 *             If the sending wasn't successful in any way, a {@link ServerUnavailableException}
-	 *             exception is thrown.
+	 *             If server to send the request to is unavailable.
 	 * @throws RegistrationException
 	 *             This exception is thrown when a problem with the registration process appears.
 	 */
@@ -76,8 +86,10 @@ public interface IConnection {
 	 *            Name of the Agent.
 	 * @throws RegistrationException
 	 *             This exception is thrown when a problem with the un-registration process appears.
+	 * @throws ServerUnavailableException
+	 *             If server to send the request to is unavailable.
 	 */
-	void unregisterPlatform(String agentName) throws RegistrationException;
+	void unregisterPlatform(String agentName) throws RegistrationException, ServerUnavailableException;
 
 	/**
 	 * Registers the specified parameters at the server and returns a unique identifier which will
@@ -90,8 +102,7 @@ public interface IConnection {
 	 * 
 	 * @return Returns the unique identifier.
 	 * @throws ServerUnavailableException
-	 *             If the sending wasn't successful in any way, a {@link ServerUnavailableException}
-	 *             exception is thrown.
+	 *             If server to send the request to is unavailable.
 	 * @throws RegistrationException
 	 *             This exception is thrown when a problem with the registration process appears.
 	 */
@@ -107,8 +118,7 @@ public interface IConnection {
 	 * 
 	 * @return Returns the unique identifier.
 	 * @throws ServerUnavailableException
-	 *             If the sending wasn't successful in any way, a {@link ServerUnavailableException}
-	 *             exception is thrown.
+	 *             If server to send the request to is unavailable.
 	 * @throws RegistrationException
 	 *             This exception is thrown when a problem with the registration process appears.
 	 */
@@ -124,12 +134,44 @@ public interface IConnection {
 	 * 
 	 * @return Returns the unique identifier.
 	 * @throws ServerUnavailableException
+	 *             If server to send the request to is unavailable.
+	 * @throws RegistrationException
+	 *             This exception is thrown when a problem with the registration process appears.
+	 */
+	long registerPlatformSensorType(long platformId, PlatformSensorTypeConfig platformSensorTypeConfig) throws ServerUnavailableException, RegistrationException;
+
+	/**
+	 * Registers the specified jmx sensor type at the CMR.
+	 * 
+	 * @param platformId
+	 *            The unique id for this platform.
+	 * @param jmxSensorTypeConfig
+	 *            The unregistered sensor type configuration.
+	 * 
+	 * @return Returns the unique identifier.
+	 * @throws ServerUnavailableException
 	 *             If the sending wasn't successful in any way, a {@link ServerUnavailableException}
 	 *             exception is thrown.
 	 * @throws RegistrationException
 	 *             This exception is thrown when a problem with the registration process appears.
 	 */
-	long registerPlatformSensorType(long platformId, PlatformSensorTypeConfig platformSensorTypeConfig) throws ServerUnavailableException, RegistrationException;
+	long registerJmxSensorType(long platformId, JmxSensorTypeConfig jmxSensorTypeConfig) throws ServerUnavailableException, RegistrationException;
+
+	/**
+	 * Adds a MBean Definition Data to the CMR.
+	 * 
+	 * @param platformIdent
+	 *            Ident of the corresponding platform.
+	 * @param config
+	 *            Represents the data on agent-side.
+	 * @return Returns the unique identifier.
+	 * @throws ServerUnavailableException
+	 *             If the sending wasn't successful in any way, a {@link ServerUnavailableException}
+	 *             exception is thrown.
+	 * @throws RegistrationException
+	 *             This exception is thrown when a problem with the registration process appears.
+	 */
+	long registerJmxDefinitionData(long platformIdent, JmxSensorConfig config) throws ServerUnavailableException, RegistrationException;
 
 	/**
 	 * Adds a sensor type to an already registered sensor at the CMR.
@@ -139,8 +181,7 @@ public interface IConnection {
 	 * @param methodId
 	 *            The id of the method.
 	 * @throws ServerUnavailableException
-	 *             If the sending wasn't successful in any way, a {@link ServerUnavailableException}
-	 *             exception is thrown.
+	 *             If server to send the request to is unavailable.
 	 * @throws RegistrationException
 	 *             This exception is thrown when a problem with the registration process appears.
 	 */

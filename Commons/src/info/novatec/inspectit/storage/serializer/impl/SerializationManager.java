@@ -1,5 +1,7 @@
 package info.novatec.inspectit.storage.serializer.impl;
 
+import info.novatec.inspectit.cmr.model.JmxDefinitionDataIdent;
+import info.novatec.inspectit.cmr.model.JmxSensorTypeIdent;
 import info.novatec.inspectit.cmr.model.MethodIdent;
 import info.novatec.inspectit.cmr.model.MethodIdentToSensorType;
 import info.novatec.inspectit.cmr.model.MethodSensorTypeIdent;
@@ -26,9 +28,12 @@ import info.novatec.inspectit.communication.data.CompilationInformationData;
 import info.novatec.inspectit.communication.data.CpuInformationData;
 import info.novatec.inspectit.communication.data.DatabaseAggregatedTimerData;
 import info.novatec.inspectit.communication.data.ExceptionSensorData;
+import info.novatec.inspectit.communication.data.HttpInfo;
 import info.novatec.inspectit.communication.data.HttpTimerData;
 import info.novatec.inspectit.communication.data.InvocationAwareData.MutableInt;
 import info.novatec.inspectit.communication.data.InvocationSequenceData;
+import info.novatec.inspectit.communication.data.JmxSensorValueData;
+import info.novatec.inspectit.communication.data.LoggingData;
 import info.novatec.inspectit.communication.data.MemoryInformationData;
 import info.novatec.inspectit.communication.data.ParameterContentData;
 import info.novatec.inspectit.communication.data.ParameterContentType;
@@ -48,6 +53,7 @@ import info.novatec.inspectit.exception.BusinessException;
 import info.novatec.inspectit.exception.RemoteException;
 import info.novatec.inspectit.exception.TechnicalException;
 import info.novatec.inspectit.exception.enumeration.AgentManagementErrorCodeEnum;
+import info.novatec.inspectit.exception.enumeration.ConfigurationInterfaceErrorCodeEnum;
 import info.novatec.inspectit.exception.enumeration.StorageErrorCodeEnum;
 import info.novatec.inspectit.storage.serializer.HibernateAwareClassResolver;
 import info.novatec.inspectit.storage.serializer.IKryoProvider;
@@ -104,13 +110,14 @@ import de.javakaffee.kryoserializers.SynchronizedCollectionsSerializer;
 import de.javakaffee.kryoserializers.UnmodifiableCollectionsSerializer;
 
 /**
- * Implementation of the {@link ISerializer} that uses Kryo library for serializing the objects. <br>
+ * Implementation of the {@link ISerializer} that uses Kryo library for serializing the objects.
+ * <br>
  * <br>
  * <b>This class is not thread safe and should be used with special attention. The class can be used
  * only by one thread while the serialization/de-serialization process lasts.</b>
- * 
+ *
  * @author Ivan Senic
- * 
+ *
  */
 @Component
 @Scope(value = ConfigurableBeanFactory.SCOPE_PROTOTYPE)
@@ -172,25 +179,25 @@ public class SerializationManager implements ISerializer, IKryoProvider, Initial
 
 	/**
 	 * Registers all necessary classes to the {@link Kryo} instance;
-	 * 
+	 *
 	 * ATTENTION!
-	 * 
+	 *
 	 * Please do not change the order of the registered classes. If new classes need to be
 	 * registered, please add this registration at the end. Otherwise the old data will not be able
 	 * to be de-serialized. If some class is not need to be register any more, do not remove the
 	 * registration. If the class is not available any more, add arbitrary class to its position, so
 	 * that the order can be maintained. Do not add unnecessary classes to the registration list.
-	 * 
+	 *
 	 * NOTE: By default, all primitives (including wrappers) and java.lang.String are registered.
 	 * Any other class, including JDK classes like ArrayList and even arrays such as String[] or
 	 * int[] must be registered.
-	 * 
+	 *
 	 * NOTE: If it is known up front what classes need to be serialized, registering the classes is
 	 * ideal. However, in some cases the classes to serialize are not known until it is time to
 	 * perform the serialization. When setRegistrationOptional is true, registered classes are still
 	 * written as an integer. However, unregistered classes are written as a String, using the name
 	 * of the class. This is much less efficient, but can't always be avoided.
-	 * 
+	 *
 	 * @param kryo
 	 *            Kryo that needs to be prepared.
 	 */
@@ -305,11 +312,26 @@ public class SerializationManager implements ISerializer, IKryoProvider, Initial
 				return new InvocationTargetException(null);
 			}
 		});
+
+		// added with INSPECTIT-1924
+		kryo.register(ConfigurationInterfaceErrorCodeEnum.class, new EnumSerializer(ConfigurationInterfaceErrorCodeEnum.class));
+
+		// added with INSPECTIT-1971
+		kryo.register(LoggingData.class, new InvocationAwareDataSerializer<LoggingData>(kryo, LoggingData.class, schemaManager));
+
+		// added with INSPECTIT-1915
+		kryo.register(JmxSensorTypeIdent.class, new CustomCompatibleFieldSerializer<JmxSensorTypeIdent>(kryo, JmxSensorTypeIdent.class, schemaManager, true));
+		kryo.register(JmxDefinitionDataIdent.class, new CustomCompatibleFieldSerializer<JmxDefinitionDataIdent>(kryo, JmxDefinitionDataIdent.class, schemaManager));
+		kryo.register(JmxSensorValueData.class, new CustomCompatibleFieldSerializer<JmxSensorValueData>(kryo, JmxSensorValueData.class, schemaManager));
 		
-		// added with NTDT
+		// added with INSPECTIT-1849
+		kryo.register(HttpInfo.class, new CustomCompatibleFieldSerializer<HttpInfo>(kryo, HttpInfo.class, schemaManager));
+
+        //added with NTDT
 		kryo.register(Permission.class, new FieldSerializer<Permission>(kryo, Permission.class));
 		kryo.register(Role.class, new FieldSerializer<Role>(kryo, Role.class));
 		kryo.register(User.class, new FieldSerializer<User>(kryo, User.class));
+
 	}
 
 	/**
@@ -352,8 +374,15 @@ public class SerializationManager implements ISerializer, IKryoProvider, Initial
 	}
 
 	/**
+	 * {@inheritDoc}
+	 */
+	public <T> T copy(T object) {
+		return kryo.copy(object);
+	}
+
+	/**
 	 * Gets {@link #schemaManager}.
-	 * 
+	 *
 	 * @return {@link #schemaManager}
 	 */
 	public ClassSchemaManager getSchemaManager() {
@@ -362,7 +391,7 @@ public class SerializationManager implements ISerializer, IKryoProvider, Initial
 
 	/**
 	 * <i>This setter can be removed when the Spring3.0 on the GUI side is working properly.</i>
-	 * 
+	 *
 	 * @param schemaManager
 	 *            the schemaManager to set
 	 */
@@ -372,7 +401,7 @@ public class SerializationManager implements ISerializer, IKryoProvider, Initial
 
 	/**
 	 * Sets {@link #kryoNetNetwork}.
-	 * 
+	 *
 	 * @param kryoNetNetwork
 	 *            New value for {@link #kryoNetNetwork}
 	 */
@@ -382,7 +411,7 @@ public class SerializationManager implements ISerializer, IKryoProvider, Initial
 
 	/**
 	 * Gets {@link #kryo}.
-	 * 
+	 *
 	 * @return {@link #kryo}
 	 */
 	public Kryo getKryo() {

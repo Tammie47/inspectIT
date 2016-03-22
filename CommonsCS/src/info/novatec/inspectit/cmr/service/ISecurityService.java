@@ -151,7 +151,7 @@ public interface ISecurityService {
 	/**
 	 * 
 	 * @param userOld 
-	 * 		the user that is edited and now needs to be deleted
+	 * 		the user that is edited
 	 * @param email
 	 * 		the new email
 	 * @param password
@@ -190,13 +190,6 @@ public interface ISecurityService {
 	 * @return An List containing all Roles
 	 */
 	List<Permission> getAllPermissions();
-
-	/**
-	 * Changes the parameter for a permission, just a wrapper for changePermissionAttributes.
-	 * @param permission
-	 * 				the permission with the actualized parameter.
-	 */
-	void changePermissionParameter(Permission permission);	
 
 	/**
 	 * Returns titles of permissions as Strings.
