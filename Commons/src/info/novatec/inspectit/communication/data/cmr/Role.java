@@ -1,4 +1,5 @@
 package info.novatec.inspectit.communication.data.cmr;
+
 import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.HashSet;
@@ -18,17 +19,17 @@ import javax.persistence.SequenceGenerator;
 import org.hibernate.annotations.LazyCollection;
 import org.hibernate.annotations.LazyCollectionOption;
 
-
 /**
  * Stores the permissions asociated with the Role.
+ * 
  * @author Joshua Hartmann
  * @author Andreas Herzog
  *
  */
 @Entity
-@NamedQueries({@NamedQuery(name = Role.FIND_ALL, query = "SELECT r FROM Role r"),
-	@NamedQuery(name = Role.FIND_BY_TITLE, query = "SELECT r FROM Role r WHERE r.title=:title"),
-	@NamedQuery(name = Role.FIND_BY_ID, query = "SELECT r FROM Role r WHERE r.id=:id") })
+@NamedQueries({ @NamedQuery(name = Role.FIND_ALL, query = "SELECT r FROM Role r"),
+		@NamedQuery(name = Role.FIND_BY_TITLE, query = "SELECT r FROM Role r WHERE r.title=:title"),
+		@NamedQuery(name = Role.FIND_BY_ID, query = "SELECT r FROM Role r WHERE r.id=:id") })
 public class Role implements Serializable {
 	/**
 	 * Generated UID.
@@ -37,7 +38,7 @@ public class Role implements Serializable {
 
 	/**
 	 * Constant for findAll query.
-	 */ 
+	 */
 	public static final String FIND_ALL = "Role.findAll";
 
 	/**
@@ -60,10 +61,11 @@ public class Role implements Serializable {
 
 	/**
 	 * Contains all permissions this role has.
-	 */ 
+	 */
 	@ManyToMany
 	@LazyCollection(LazyCollectionOption.FALSE)
-	//Using a List<Permission> will lead to a error with Kryo and Hibernate because Hibernate uses a PersistentBag
+	// Using a List<Permission> will lead to a error with Kryo and Hibernate
+	// because Hibernate uses a PersistentBag
 	private Set<Permission> permissions;
 
 	/**
@@ -75,21 +77,26 @@ public class Role implements Serializable {
 	/**
 	 * A more detailed description for the role.
 	 */
-	private String description; 
+	private String description;
 
 	/**
 	 * Default constructor for Role.
-	 */ 
+	 */
 	public Role() {
 
 	}
 
 	/**
 	 * The constructor for a role.
-	 * @param id The id of the role. [id should no longer be hardcoded]
-	 * @param permissions The permissions this role has.
-	 * @param title The title for the role.
-	 * @param description Description of the role.
+	 * 
+	 * @param id
+	 *            The id of the role. [id should no longer be hardcoded]
+	 * @param permissions
+	 *            The permissions this role has.
+	 * @param title
+	 *            The title for the role.
+	 * @param description
+	 *            Description of the role.
 	 */
 	public Role(long id, String title, List<Permission> permissions, String description) {
 		super();
@@ -101,9 +108,13 @@ public class Role implements Serializable {
 
 	/**
 	 * The constructor for a role.
-	 * @param permissions The permissions this role has.
-	 * @param title The title for the role.
-	 * @param description Description of the role.
+	 * 
+	 * @param permissions
+	 *            The permissions this role has.
+	 * @param title
+	 *            The title for the role.
+	 * @param description
+	 *            Description of the role.
 	 */
 	public Role(String title, List<Permission> permissions, String description) {
 		super();
@@ -114,8 +125,8 @@ public class Role implements Serializable {
 
 	/**
 	 * Gets {@link #permissions}.
-	 *   
-	 * @return {@link #permissions}  
+	 * 
+	 * @return {@link #permissions}
 	 */
 	public List<Permission> getPermissions() {
 		return new ArrayList<Permission>(permissions);
@@ -123,8 +134,8 @@ public class Role implements Serializable {
 
 	/**
 	 * Gets {@link #title}.
-	 *   
-	 * @return {@link #title}  
+	 * 
+	 * @return {@link #title}
 	 */
 	public String getTitle() {
 		return title;
@@ -132,8 +143,8 @@ public class Role implements Serializable {
 
 	/**
 	 * Gets {@link #Id}.
-	 *   
-	 * @return {@link #Id}  
+	 * 
+	 * @return {@link #Id}
 	 */
 	public Long getId() {
 		return id;
@@ -141,8 +152,8 @@ public class Role implements Serializable {
 
 	/**
 	 * Gets {@link #description}.
-	 *   
-	 * @return {@link #description}  
+	 * 
+	 * @return {@link #description}
 	 */
 	public String getDescription() {
 		return description;
@@ -153,34 +164,35 @@ public class Role implements Serializable {
 	 */
 	@Override
 	public String toString() {
-		return "Role [permissions=" + getPermissions().toString() + ", title='" + title + "', description='" + description + "', id=" + id + "]";
+		return "Role [permissions=" + getPermissions().toString() + ", title='" + title + "', description='"
+				+ description + "', id=" + id + "]";
 	}
 
-	/**  
-	 * Sets {@link #permissions}.  
-	 *   
-	 * @param permissions  
-	 *            New value for {@link #permissions}  
+	/**
+	 * Sets {@link #permissions}.
+	 * 
+	 * @param permissions
+	 *            New value for {@link #permissions}
 	 */
 	public void setPermissions(List<Permission> permissions) {
 		this.permissions = new HashSet<Permission>(permissions);
 	}
 
-	/**  
-	 * Sets {@link #title}.  
-	 *   
-	 * @param title  
-	 *            New value for {@link #title}  
+	/**
+	 * Sets {@link #title}.
+	 * 
+	 * @param title
+	 *            New value for {@link #title}
 	 */
 	public void setTitle(String title) {
 		this.title = title;
 	}
 
-	/**  
-	 * Sets {@link #id}.  
-	 *   
-	 * @param id  
-	 *            New value for {@link #id}  
+	/**
+	 * Sets {@link #id}.
+	 * 
+	 * @param id
+	 *            New value for {@link #id}
 	 */
 	public void setId(long id) {
 		this.id = id;
@@ -188,8 +200,9 @@ public class Role implements Serializable {
 
 	/**
 	 * Sets {@link #description}.
+	 * 
 	 * @param description
-	 *       New value for {@link #description}
+	 *            New value for {@link #description}
 	 */
 	public void setDescription(String description) {
 		this.description = description;

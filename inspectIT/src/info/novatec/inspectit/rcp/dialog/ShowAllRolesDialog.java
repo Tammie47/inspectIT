@@ -28,12 +28,12 @@ import info.novatec.inspectit.rcp.repository.CmrRepositoryDefinition;
  */
 
 public class ShowAllRolesDialog extends TitleAreaDialog {
-	
+
 	/**
 	 * CmrRepositoryDefinition.
 	 */
 	private CmrRepositoryDefinition cmrRepositoryDefinition;
-	
+
 	/**
 	 * List of all Roles.
 	 */
@@ -46,19 +46,21 @@ public class ShowAllRolesDialog extends TitleAreaDialog {
 	 * {@link EditRoleDialog}.
 	 */
 	private EditRoleDialog editRoleDialog;
+
 	/**
 	 * Default constructor.
+	 * 
 	 * @param parentShell
-	 * 				Parent {@link Shell} to create Dialog on
+	 *            Parent {@link Shell} to create Dialog on
 	 * @param cmrRepositoryDefinition
-	 * CmrRepositoryDefinition for easy access to security services.
+	 *            CmrRepositoryDefinition for easy access to security services.
 	 */
 	public ShowAllRolesDialog(Shell parentShell, CmrRepositoryDefinition cmrRepositoryDefinition) {
 		super(parentShell);
 		this.cmrRepositoryDefinition = cmrRepositoryDefinition;
 		roles = cmrRepositoryDefinition.getSecurityService().getAllRoles();
 	}
-	
+
 	/**
 	 * {@inheritDoc}
 	 */
@@ -67,6 +69,7 @@ public class ShowAllRolesDialog extends TitleAreaDialog {
 		super.create();
 		this.setTitle("Show all roles");
 	}
+
 	/**
 	 * {@inheritDoc}
 	 */
@@ -78,18 +81,18 @@ public class ShowAllRolesDialog extends TitleAreaDialog {
 		gd.widthHint = 400;
 		gd.heightHint = 100;
 		main.setLayoutData(gd);
-		
+
 		Label textLabel = new Label(main, SWT.NONE);
 		textLabel.setLayoutData(new GridData(SWT.BEGINNING, SWT.CENTER, false, false, 2, 5));
 		textLabel.setText("All roles are shown below.");
-		
+
 		table = new Table(parent, SWT.MULTI | SWT.BORDER | SWT.FULL_SELECTION);
 		GridData gdTable = new GridData(SWT.FILL, SWT.FILL, true, true);
 		gdTable.heightHint = 200;
 		table.setLayoutData(gdTable);
 		table.setLinesVisible(true);
 		table.setHeaderVisible(true);
-		
+
 		TableColumn column1 = new TableColumn(table, SWT.NONE);
 		column1.setText("Role");
 		column1.pack();
@@ -103,10 +106,10 @@ public class ShowAllRolesDialog extends TitleAreaDialog {
 					TableItem[] tableItems = table.getItems();
 					long id = 0;
 					for (Role r : roles) {
-				    	if (r.getTitle().equals(tableItems[table.getSelectionIndex()].getText(0))) {
-				    		id = r.getId();
-				    	}
-				    }
+						if (r.getTitle().equals(tableItems[table.getSelectionIndex()].getText(0))) {
+							id = r.getId();
+						}
+					}
 					Role role = cmrRepositoryDefinition.getSecurityService().getRoleByID(id);
 					roleDialog(main.getShell(), role);
 					roles = cmrRepositoryDefinition.getSecurityService().getAllRoles();
@@ -115,46 +118,47 @@ public class ShowAllRolesDialog extends TitleAreaDialog {
 			}
 		});
 		parent.pack();
-		
+
 		return main;
 	}
-	
+
 	/**
 	 * Dialog in case a user is clicked in the table.
 	 * 
 	 * @param parentShell
 	 *            parent shell for the {@link EditUserDialog}
 	 * @param role
-	 * 		 	  the role to edit.
+	 *            the role to edit.
 	 */
 	private void roleDialog(Shell parentShell, Role role) {
 		editRoleDialog = new EditRoleDialog(parentShell, cmrRepositoryDefinition, role);
 		editRoleDialog.open();
 	}
+
 	/**
 	 * updates the table.
 	 */
 	private void updateTable() {
 		table.removeAll();
-		
+
 		// content for rows
 		for (int i = 0; i < roles.size(); i++) {
 			TableItem item = new TableItem(table, SWT.NONE);
 			item.setText(0, roles.get(i).getTitle());
-			
+
 			List<Permission> permissions = roles.get(i).getPermissions();
-			
+
 			Collections.sort(permissions);
-			
+
 			String perm = "";
 			for (int k = 0; k < permissions.size(); k++) {
 				perm += permissions.get(k).getTitle();
-				
+
 				if (k < permissions.size() - 1) {
 					perm += ", ";
 				}
 			}
-			
+
 			item.setText(1, perm);
 		}
 		for (TableColumn column : table.getColumns()) {

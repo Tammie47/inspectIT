@@ -16,26 +16,28 @@ import org.springframework.beans.factory.annotation.Autowired;
  * @author Lucca Hellriegel
  */
 public class CmrSecurityManager extends DefaultWebSecurityManager {
-	
+
 	/**
 	 * Logger of this Class.
 	 */
 	@Log
 	Logger log;
-	
+
 	/**
 	 * Communication instance towards the database.
 	 */
 	@Autowired
 	private CmrRealm cmrRealm;
-	
+
 	/**
 	 * Constructor for the Security Manager.
-	 * @param realm Realm object for configuration of the manager.
+	 * 
+	 * @param realm
+	 *            Realm object for configuration of the manager.
 	 */
-	@Autowired	
+	@Autowired
 	public CmrSecurityManager(CmrRealm realm) {
-		super(realm);	
+		super(realm);
 	}
 
 	@Override

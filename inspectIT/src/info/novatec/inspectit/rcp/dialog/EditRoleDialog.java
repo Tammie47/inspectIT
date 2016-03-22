@@ -36,7 +36,7 @@ public class EditRoleDialog extends TitleAreaDialog {
 	 * role name text box.
 	 */
 	private Text roleNameBox;
-	
+
 	/**
 	 * Role-description text box.
 	 */
@@ -46,7 +46,7 @@ public class EditRoleDialog extends TitleAreaDialog {
 	 * Edit button.
 	 */
 	private Button editButton;
-	
+
 	/**
 	 * Delete Role button.
 	 */
@@ -56,7 +56,7 @@ public class EditRoleDialog extends TitleAreaDialog {
 	 * The role to edit.
 	 */
 	private Role roleOld;
-	
+
 	/**
 	 * List of all Roles.
 	 */
@@ -65,8 +65,8 @@ public class EditRoleDialog extends TitleAreaDialog {
 	/**
 	 * Edit button id.
 	 */
-	private static final int EDIT_ID = 0; //IDialogConstants.OK_ID;
-	
+	private static final int EDIT_ID = 0; // IDialogConstants.OK_ID;
+
 	/**
 	 * Delete role button id.
 	 */
@@ -74,20 +74,21 @@ public class EditRoleDialog extends TitleAreaDialog {
 	/**
 	 * List of permissions that the current user can give to the new role.
 	 */
-	private List<String> allPermissionsStrings = new ArrayList<String>(); 
+	private List<String> allPermissionsStrings = new ArrayList<String>();
 	/**
 	 * Array of buttons to display the permissions that can be granted.
 	 */
-	private Button[] allPermissionsButtons; 
+	private Button[] allPermissionsButtons;
+
 	/**
 	 * Default constructor.
 	 * 
 	 * @param parentShell
 	 *            Parent {@link Shell} to create Dialog on
 	 * @param cmrRepositoryDefinition
-	 * CmrRepositoryDefinition for easy access to security services.
+	 *            CmrRepositoryDefinition for easy access to security services.
 	 * @param role
-	 * the role to edit.
+	 *            the role to edit.
 	 */
 	public EditRoleDialog(Shell parentShell, CmrRepositoryDefinition cmrRepositoryDefinition, Role role) {
 		super(parentShell);
@@ -130,7 +131,7 @@ public class EditRoleDialog extends TitleAreaDialog {
 		roleDescriptionBox = new Text(main, SWT.BORDER);
 		roleDescriptionBox.setLayoutData(new GridData(SWT.FILL, SWT.CENTER, true, false));
 		roleDescriptionBox.setText(roleOld.getDescription());
-		
+
 		Label textPermissionLabel = new Label(main, SWT.NONE);
 		textPermissionLabel.setLayoutData(new GridData(SWT.BEGINNING, SWT.CENTER, false, false, 2, 5));
 		textPermissionLabel.setText("Mark the permissions, that the new role should have:");
@@ -138,18 +139,18 @@ public class EditRoleDialog extends TitleAreaDialog {
 		List<Permission> allPermissions = cmrRepositoryDefinition.getSecurityService().getAllPermissions();
 		for (int i = 0; i < allPermissions.size(); i++) {
 			this.allPermissionsStrings.add(allPermissions.get(i).getTitle());
-			}
+		}
 		this.allPermissionsButtons = new Button[allPermissionsStrings.size()];
 		for (int i = 0; i < allPermissionsStrings.size(); i++) {
 			allPermissionsButtons[i] = new Button(parent, SWT.CHECK);
 			allPermissionsButtons[i].setText(allPermissionsStrings.get(i));
 			for (Permission perm : permissionList) {
-				if (perm.getTitle().equals(allPermissionsStrings.get(i))) { 
+				if (perm.getTitle().equals(allPermissionsStrings.get(i))) {
 					allPermissionsButtons[i].setSelection(true);
 				}
 			}
 		}
-		
+
 		return main;
 	}
 
@@ -198,15 +199,15 @@ public class EditRoleDialog extends TitleAreaDialog {
 		}
 		boolean admin = false;
 		for (Permission perm : rolePermissions) {
-			if (perm.getTitle().equals("cmrAdministrationPermission")) { 
+			if (perm.getTitle().equals("cmrAdministrationPermission")) {
 				admin = true;
 			}
 		}
 		if (admin) {
 			List<Role> adminRoles = new ArrayList<Role>();
-			for	(Role role : rolesList) {
+			for (Role role : rolesList) {
 				List<Permission> permissions = role.getPermissions();
-				for (Permission perm: permissions) {
+				for (Permission perm : permissions) {
 					if (perm.getTitle().equals("cmrAdministrationPermission")) {
 						adminRoles.add(role);
 					}
@@ -219,20 +220,23 @@ public class EditRoleDialog extends TitleAreaDialog {
 				}
 			}
 			if (!stillAdmin && adminRoles.size() < 2) {
-				MessageDialog.openWarning(null, "Warning", "This role can not be deleted. Please make sure there is at least one admin role remaining.");
+				MessageDialog.openWarning(null, "Warning",
+						"This role can not be deleted. Please make sure there is at least one admin role remaining.");
 				return;
 			}
 		}
-		cmrRepositoryDefinition.getSecurityService().changeRoleAttribute(roleOld, name, roleDescriptionBox.getText(), newPermissions);
+		cmrRepositoryDefinition.getSecurityService().changeRoleAttribute(roleOld, name, roleDescriptionBox.getText(),
+				newPermissions);
 		okPressed();
 	}
-	
+
 	/**
 	 * Notifies that the delete role button has been pressed.
 	 */
 	private void deletePressed() {
 		if (roleOld.getTitle().equals("guestRole")) {
-			MessageDialog.openWarning(null, "Warning", "This role is required for guest access and can not be deleted.");
+			MessageDialog.openWarning(null, "Warning",
+					"This role is required for guest access and can not be deleted.");
 			return;
 		}
 		long id = roleOld.getId();
@@ -240,22 +244,23 @@ public class EditRoleDialog extends TitleAreaDialog {
 		List<Permission> rolePermissions = roleOld.getPermissions();
 		boolean admin = false;
 		for (Permission perm : rolePermissions) {
-			if (perm.getTitle().equals("cmrAdministrationPermission")) { 
+			if (perm.getTitle().equals("cmrAdministrationPermission")) {
 				admin = true;
 			}
 		}
 		if (admin) {
 			List<Role> adminRoles = new ArrayList<Role>();
-			for	(Role role : rolesList) {
+			for (Role role : rolesList) {
 				List<Permission> permissions = role.getPermissions();
-				for (Permission perm: permissions) {
+				for (Permission perm : permissions) {
 					if (perm.getTitle().equals("cmrAdministrationPermission")) {
 						adminRoles.add(role);
 					}
 				}
 			}
 			if (adminRoles.size() < 2) {
-				MessageDialog.openWarning(null, "Warning", "You are about to remove the last admin role. Please make sure there is at least one admin role remaining.");
+				MessageDialog.openWarning(null, "Warning",
+						"You are about to remove the last admin role. Please make sure there is at least one admin role remaining.");
 				return;
 			}
 		}
@@ -274,7 +279,7 @@ public class EditRoleDialog extends TitleAreaDialog {
 				cmrRepositoryDefinition.getSecurityService().deleteUser(user);
 			}
 		}
-		
+
 		cmrRepositoryDefinition.getSecurityService().deleteRole(roleOld);
 		okPressed();
 	}

@@ -44,12 +44,12 @@ public class EditUserDialog extends TitleAreaDialog {
 	 * password text box.
 	 */
 	private Text passwordBox;
-	
+
 	/**
 	 * Boolean to see if user is locked.
 	 */
 	private boolean isLocked;
-	
+
 	/**
 	 * Edit button.
 	 */
@@ -77,7 +77,7 @@ public class EditUserDialog extends TitleAreaDialog {
 	/**
 	 * Reset button id.
 	 */
-	private static final int EDIT_ID = 0; //IDialogConstants.OK_ID;
+	private static final int EDIT_ID = 0; // IDialogConstants.OK_ID;
 
 	/**
 	 * Delete user button id.
@@ -90,9 +90,9 @@ public class EditUserDialog extends TitleAreaDialog {
 	 * @param parentShell
 	 *            Parent {@link Shell} to create Dialog on
 	 * @param cmrRepositoryDefinition
-	 * CmrRepositoryDefinition for easy access to security services.
+	 *            CmrRepositoryDefinition for easy access to security services.
 	 * @param user
-	 * the user to edit.
+	 *            the user to edit.
 	 */
 	public EditUserDialog(Shell parentShell, CmrRepositoryDefinition cmrRepositoryDefinition, User user) {
 		super(parentShell);
@@ -157,15 +157,14 @@ public class EditUserDialog extends TitleAreaDialog {
 			@Override
 			public void widgetSelected(SelectionEvent e) {
 				boolean selected = checkBox.getSelection();
-                if (selected) {
-                	isLocked = true;
-                } else {
-                	isLocked = false;
-                }
-            }
+				if (selected) {
+					isLocked = true;
+				} else {
+					isLocked = false;
+				}
+			}
 		});
-               
-		
+
 		return main;
 	}
 
@@ -217,7 +216,8 @@ public class EditUserDialog extends TitleAreaDialog {
 			MessageDialog.openWarning(null, "Warning", "The guest user's login data can not be edited.");
 			return;
 		}
-		cmrRepositoryDefinition.getSecurityService().changeUserAttribute(userOld, mail, password, id, passwordChanged, isLocked);
+		cmrRepositoryDefinition.getSecurityService().changeUserAttribute(userOld, mail, password, id, passwordChanged,
+				isLocked);
 		okPressed();
 	}
 
@@ -226,23 +226,24 @@ public class EditUserDialog extends TitleAreaDialog {
 	 */
 	private void deletePressed() {
 		if (userOld.getEmail().equals("guest")) {
-			MessageDialog.openWarning(null, "Warning", "This user is required for guest access and can not be deleted.");
+			MessageDialog.openWarning(null, "Warning",
+					"This user is required for guest access and can not be deleted.");
 			return;
 		}
 		Role userRole = cmrRepositoryDefinition.getSecurityService().getRoleOfUser(userOld.getEmail());
 		List<Permission> userPermissions = userRole.getPermissions();
 		boolean admin = false;
 		for (Permission perm : userPermissions) {
-			if (perm.getTitle().equals("cmrAdministrationPermission")) { 
+			if (perm.getTitle().equals("cmrAdministrationPermission")) {
 				admin = true;
 			}
 		}
 		if (admin) {
 			List<Role> adminRoles = new ArrayList<Role>();
 			List<String> adminUsers = new ArrayList<String>();
-			for	(Role role : rolesList) {
+			for (Role role : rolesList) {
 				List<Permission> rolePermissions = role.getPermissions();
-				for (Permission perm: rolePermissions) {
+				for (Permission perm : rolePermissions) {
 					if (perm.getTitle().equals("cmrAdministrationPermission")) {
 						adminRoles.add(role);
 					}
@@ -253,10 +254,11 @@ public class EditUserDialog extends TitleAreaDialog {
 				adminUsers.addAll(cmrRepositoryDefinition.getSecurityService().getUsersByRole(id));
 			}
 			if (adminUsers.size() < 2) {
-				MessageDialog.openWarning(null, "Warning", "This user can not be deleted. Please make sure there is at least one admin user remaining.");
+				MessageDialog.openWarning(null, "Warning",
+						"This user can not be deleted. Please make sure there is at least one admin user remaining.");
 				return;
 			}
-		} 
+		}
 		Boolean confirm = MessageDialog.openConfirm(null, "Delete user", "Do you really want to delete this user?");
 		if (!confirm) {
 			return;
@@ -266,5 +268,3 @@ public class EditUserDialog extends TitleAreaDialog {
 
 	}
 }
-
-

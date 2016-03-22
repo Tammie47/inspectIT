@@ -27,7 +27,7 @@ public class ShowEditablePermissionsDialog extends TitleAreaDialog {
 	 * CmrRepositoryDefinition.
 	 */
 	private CmrRepositoryDefinition cmrRepositoryDefinition;
-	
+
 	/**
 	 * List of all permissions.
 	 */
@@ -42,18 +42,20 @@ public class ShowEditablePermissionsDialog extends TitleAreaDialog {
 	 * {@link EditPermissionDialog}.
 	 */
 	private EditPermissionDialog editPermissionDialog;
+
 	/**
 	 * Default constructor.
+	 * 
 	 * @param parentShell
-	 * 				Parent {@link Shell} to create Dialog on
+	 *            Parent {@link Shell} to create Dialog on
 	 * @param cmrRepositoryDefinition
-	 * CmrRepositoryDefinition for easy access to security services.
+	 *            CmrRepositoryDefinition for easy access to security services.
 	 */
 	public ShowEditablePermissionsDialog(Shell parentShell, CmrRepositoryDefinition cmrRepositoryDefinition) {
 		super(parentShell);
 		this.cmrRepositoryDefinition = cmrRepositoryDefinition;
 		allPermissions = cmrRepositoryDefinition.getSecurityService().getAllPermissions();
-			
+
 	}
 
 	/**
@@ -64,6 +66,7 @@ public class ShowEditablePermissionsDialog extends TitleAreaDialog {
 		super.create();
 		this.setTitle("Edit parameters for permissions");
 	}
+
 	/**
 	 * {@inheritDoc}
 	 */
@@ -111,7 +114,7 @@ public class ShowEditablePermissionsDialog extends TitleAreaDialog {
 		parent.pack();
 
 		return main;
-	}	
+	}
 
 	/**
 	 * Dialog in case a permission is clicked in the table.
@@ -119,7 +122,7 @@ public class ShowEditablePermissionsDialog extends TitleAreaDialog {
 	 * @param parentShell
 	 *            parent shell for the {@link EditPermissionDialog}
 	 * @param permission
-	 * 		 	  the permission to edit.
+	 *            the permission to edit.
 	 */
 	private void permissionsDialog(Shell parentShell, Permission permission) {
 		editPermissionDialog = new EditPermissionDialog(parentShell, cmrRepositoryDefinition, permission);
@@ -136,9 +139,9 @@ public class ShowEditablePermissionsDialog extends TitleAreaDialog {
 			TableItem item = new TableItem(table, SWT.NONE);
 
 			item.setText(0, allPermissions.get(i).getTitle());
-			item.setText(1, allPermissions.get(i).getParameter());	
+			item.setText(1, allPermissions.get(i).getParameter());
 			item.setText(2, allPermissions.get(i).getDescription());
-			
+
 		}
 		for (TableColumn column : table.getColumns()) {
 			column.pack();

@@ -1,6 +1,5 @@
 package info.novatec.inspectit.rcp.wizard.page;
 
-
 import org.eclipse.jface.wizard.WizardPage;
 import org.eclipse.swt.events.SelectionAdapter;
 import org.eclipse.swt.events.SelectionEvent;
@@ -44,7 +43,7 @@ public class CmrLoginWizardPage extends WizardPage {
 	public Text getPasswordBox() {
 		return passwordBox;
 	}
-	
+
 	/**
 	 * Default constructor.
 	 * 
@@ -81,20 +80,20 @@ public class CmrLoginWizardPage extends WizardPage {
 			@Override
 			public void widgetSelected(SelectionEvent e) {
 				boolean selected = checkBox.getSelection();
-                if (selected) {
-                	mailBox.setText("guest");
-    				passwordBox.setText("guest");
-    				mailBox.setEditable(false);
-    				passwordBox.setEditable(false);
-                } else {
-                	mailBox.setText("");
-    				passwordBox.setText("");
-    				mailBox.setEditable(true);
-    				passwordBox.setEditable(true);
-                }
-               }
+				if (selected) {
+					mailBox.setText("guest");
+					passwordBox.setText("guest");
+					mailBox.setEditable(false);
+					passwordBox.setEditable(false);
+				} else {
+					mailBox.setText("");
+					passwordBox.setText("");
+					mailBox.setEditable(true);
+					passwordBox.setEditable(true);
+				}
+			}
 		});
-		
+
 		Listener pageModifyListener = new Listener() {
 
 			@Override
@@ -140,5 +139,5 @@ public class CmrLoginWizardPage extends WizardPage {
 
 		setMessage(DEFAULT_MESSAGE);
 	}
-	
+
 }

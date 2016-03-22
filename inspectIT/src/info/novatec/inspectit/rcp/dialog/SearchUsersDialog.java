@@ -25,6 +25,7 @@ import org.eclipse.swt.widgets.TableItem;
 import info.novatec.inspectit.communication.data.cmr.Role;
 import info.novatec.inspectit.communication.data.cmr.User;
 import info.novatec.inspectit.rcp.repository.CmrRepositoryDefinition;
+
 /**
  * Dialog to search users.
  * 
@@ -47,7 +48,7 @@ public class SearchUsersDialog extends TitleAreaDialog {
 	/**
 	 * Reset button id.
 	 */
-	private static final int SEARCH_ID = 0; //IDialogConstants.OK_ID;
+	private static final int SEARCH_ID = 0; // IDialogConstants.OK_ID;
 	/**
 	 * Table to display users.
 	 */
@@ -68,12 +69,14 @@ public class SearchUsersDialog extends TitleAreaDialog {
 	 * {@link EditUserDialog}.
 	 */
 	private EditUserDialog editUserDialog;
+
 	/**
 	 * Default constructor.
+	 * 
 	 * @param parentShell
-	 * 				Parent {@link Shell} to create Dialog on
+	 *            Parent {@link Shell} to create Dialog on
 	 * @param cmrRepositoryDefinition
-	 * CmrRepositoryDefinition for easy access to security services.
+	 *            CmrRepositoryDefinition for easy access to security services.
 	 */
 	public SearchUsersDialog(Shell parentShell, CmrRepositoryDefinition cmrRepositoryDefinition) {
 		super(parentShell);
@@ -137,7 +140,8 @@ public class SearchUsersDialog extends TitleAreaDialog {
 			public void widgetSelected(SelectionEvent e) {
 				if (table.getSelectionIndex() != -1) {
 					TableItem[] tableItems = table.getItems();
-					User user = cmrRepositoryDefinition.getSecurityService().getUser(tableItems[table.getSelectionIndex()].getText(0));
+					User user = cmrRepositoryDefinition.getSecurityService()
+							.getUser(tableItems[table.getSelectionIndex()].getText(0));
 					userDialog(main.getShell(), user);
 				}
 			}
@@ -157,12 +161,8 @@ public class SearchUsersDialog extends TitleAreaDialog {
 		searchBox.addModifyListener(modifyListener);
 		searchOptions.addModifyListener(modifyListener);
 
-
-
 		return main;
 	}
-
-
 
 	/**
 	 * {@inheritDoc}
@@ -204,7 +204,7 @@ public class SearchUsersDialog extends TitleAreaDialog {
 				}
 			}
 		} else if (searchOptions.getText().equals("Role")) {
-			long id = 0; //Role IDs start at 1.
+			long id = 0; // Role IDs start at 1.
 			for (Role role : rolesList) {
 				if (role.getTitle().equals(searchBox.getText())) {
 					id = role.getId();
@@ -233,6 +233,7 @@ public class SearchUsersDialog extends TitleAreaDialog {
 
 	/**
 	 * Checks if the input is not null.
+	 * 
 	 * @return true if not null.
 	 */
 	private boolean isInputValid() {
@@ -241,17 +242,17 @@ public class SearchUsersDialog extends TitleAreaDialog {
 		}
 		if ("".equals(searchOptions.getText())) {
 			return false;
-		} 
+		}
 		return true;
 	}
-	
+
 	/**
 	 * Dialog in case a user is clicked in the table.
 	 * 
 	 * @param parentShell
 	 *            parent shell for the {@link EditUserDialog}
 	 * @param user
-	 * 		 	  the user to edit.
+	 *            the user to edit.
 	 */
 	private void userDialog(Shell parentShell, User user) {
 		editUserDialog = new EditUserDialog(parentShell, cmrRepositoryDefinition, user);

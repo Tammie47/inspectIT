@@ -58,7 +58,8 @@ public class CmrLoginWizard extends Wizard implements INewWizard {
 	}
 
 	/**
-	 * {@inheritDoc} Tries to log into the CMR and to get and set the list with grantedPermissions.
+	 * {@inheritDoc} Tries to log into the CMR and to get and set the list with
+	 * grantedPermissions.
 	 */
 	@Override
 	public boolean performFinish() {
@@ -70,9 +71,11 @@ public class CmrLoginWizard extends Wizard implements INewWizard {
 			boolean loggedin = cmrRepositoryDefinition.login(email, password);
 
 			if (loggedin) {
-				MessageDialog.openInformation(null, "Successfully authenticated at selected CMR", "You are now logged in.");
+				MessageDialog.openInformation(null, "Successfully authenticated at selected CMR",
+						"You are now logged in.");
 			} else {
-				MessageDialog.openError(null, "Login failed", "E-Mail or Password is incorrect or you are locked by admin!");
+				MessageDialog.openError(null, "Login failed",
+						"E-Mail or Password is incorrect or you are locked by admin!");
 			}
 			return loggedin;
 		} else {

@@ -1,6 +1,5 @@
 package info.novatec.inspectit.cmr.security;
 
-
 import info.novatec.inspectit.cmr.dao.RoleDao;
 import info.novatec.inspectit.cmr.dao.UserDao;
 import info.novatec.inspectit.communication.data.cmr.Permission;
@@ -52,16 +51,17 @@ public class CmrRealm extends AuthorizingRealm {
 		UsernamePasswordToken upToken = (UsernamePasswordToken) token;
 		String email = upToken.getUsername();
 		String pw = new String(upToken.getPassword());
-		
+
 		User foundUser = userDao.findByEmail(email);
 		if (foundUser == null) {
 			throw new AuthenticationException("An Error occurred while logging into the cmr.");
-		}  else if (!foundUser.getPassword().equals(Permutation.hashString(pw))) {
+		} else if (!foundUser.getPassword().equals(Permutation.hashString(pw))) {
 			throw new AuthenticationException("An Error occurred while logging into the cmr.");
 		}
 
 		SimpleAuthenticationInfo authInfo = new SimpleAuthenticationInfo();
-		SimplePrincipalCollection principalCollection = new SimplePrincipalCollection(upToken.getPrincipal(), getName());
+		SimplePrincipalCollection principalCollection = new SimplePrincipalCollection(upToken.getPrincipal(),
+				getName());
 
 		authInfo.setPrincipals(principalCollection);
 		authInfo.setCredentials(upToken.getCredentials());
@@ -72,15 +72,15 @@ public class CmrRealm extends AuthorizingRealm {
 	@Override
 	protected AuthorizationInfo doGetAuthorizationInfo(PrincipalCollection principals) {
 		SimpleAuthorizationInfo authorizationInfo = new SimpleAuthorizationInfo();
-		String email = (String) getAvailablePrincipal(principals);		
+		String email = (String) getAvailablePrincipal(principals);
 		Role role;
-		
+
 		User foundUser = userDao.findByEmail(email);
 		if (foundUser == null) {
 			throw new AuthenticationException("Email or password is incorrect.");
 		}
-		
-		role = getRoleByID(foundUser.getRoleId());		
+
+		role = getRoleByID(foundUser.getRoleId());
 
 		for (Permission perm : role.getPermissions()) {
 			authorizationInfo.addStringPermission(perm.getTitle());
@@ -89,16 +89,19 @@ public class CmrRealm extends AuthorizingRealm {
 
 		return authorizationInfo;
 	}
-	
+
 	/**
 	 * Searches for the Role matching a given ID.
-	 * @param id RoleID.
+	 * 
+	 * @param id
+	 *            RoleID.
 	 * @return Role with this ID.
-	 * @throws DataRetrievalFailureException if no role with given id exists.
+	 * @throws DataRetrievalFailureException
+	 *             if no role with given id exists.
 	 */
 	public Role getRoleByID(long id) throws DataRetrievalFailureException {
 		Role role = roleDao.findByID(id);
-		
+
 		if (role == null) {
 			throw new DataRetrievalFailureException("No roles in the database matching the given id!");
 		} else {

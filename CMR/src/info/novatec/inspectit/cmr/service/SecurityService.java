@@ -1,6 +1,7 @@
 package info.novatec.inspectit.cmr.service;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 
 import javax.annotation.PostConstruct;
@@ -8,6 +9,8 @@ import javax.annotation.PostConstruct;
 import org.apache.shiro.SecurityUtils;
 import org.apache.shiro.authc.AuthenticationException;
 import org.apache.shiro.authc.UsernamePasswordToken;
+import org.apache.shiro.session.Session;
+import org.apache.shiro.session.mgt.DefaultSessionManager;
 import org.apache.shiro.subject.Subject;
 import org.slf4j.Logger;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -34,6 +37,7 @@ import info.novatec.inspectit.spring.logger.Log;
  * @author Lucca Hellriegel
  * @author Mario Rose
  * @author Joshua Hartmann
+ * @author Phil Szalay
  */
 @Service
 public class SecurityService implements ISecurityService {
@@ -360,5 +364,75 @@ public class SecurityService implements ISecurityService {
 	@Override
 	public void deleteRole(Role role) {
 		roleDao.delete(role);
+	}
+
+	@Override
+	public void resetDB() {
+
+		/**
+		 * All users logout.
+		 */
+		DefaultSessionManager sm = (DefaultSessionManager) cmrSecurityManager.getSessionManager();
+
+		for (Session session : sm.getSessionDAO().getActiveSessions()) {
+			new Subject.Builder().session(session).buildSubject().logout();
+		}
+
+		userDao.deleteAll(userDao.loadAll());
+		roleDao.deleteAll(roleDao.loadAll());
+		permissionDao.deleteAll(permissionDao.loadAll());
+
+		/**
+		 * copied from SecurityInitialization start()
+		 */
+		if (permissionDao.loadAll().isEmpty()) {
+
+			Permission cmrRecordingPermission = new Permission("cmrRecordingPermission",
+					"Permission to start recording from Agent");
+			Permission cmrShutdownAndRestartPermission = new Permission("cmrShutdownAndRestartPermission",
+					"Permission for shutting down and restarting the CMR");
+			Permission cmrDeleteAgentPermission = new Permission("cmrDeleteAgentPermission",
+					"Permission for deleting an Agent");
+			Permission cmrStoragePermission = new Permission("cmrStoragePermission",
+					"Permission for accessing basic storage options");
+			Permission cmrAdministrationPermission = new Permission("cmrAdministrationPermission",
+					"Permission for accessing the CMR Administration");
+			Permission cmrLookAtAgentsPermission = new Permission("cmrLookAtAgentsPermission",
+					"General permission to look at agents.");
+
+			// Transfers permissions to database.
+			permissionDao.saveOrUpdate(cmrRecordingPermission);
+			permissionDao.saveOrUpdate(cmrShutdownAndRestartPermission);
+			permissionDao.saveOrUpdate(cmrDeleteAgentPermission);
+			permissionDao.saveOrUpdate(cmrStoragePermission);
+			permissionDao.saveOrUpdate(cmrAdministrationPermission);
+			permissionDao.saveOrUpdate(cmrLookAtAgentsPermission);
+
+			// Predefined roles
+			Role guestRole = new Role("guestRole", new ArrayList<Permission>(), "The role of a guest-user.");
+			Role restrictedRole = new Role("restrictedRole",
+					Arrays.asList(cmrRecordingPermission, cmrStoragePermission, cmrLookAtAgentsPermission),
+					"The role of a restricted-user.");
+			Role adminRole = new Role("adminRole",
+					Arrays.asList(cmrRecordingPermission, cmrStoragePermission, cmrDeleteAgentPermission,
+							cmrShutdownAndRestartPermission, cmrAdministrationPermission, cmrLookAtAgentsPermission),
+					"The role of an admin-user.");
+
+			// Transfers roles to database.
+			roleDao.saveOrUpdate(guestRole);
+			roleDao.saveOrUpdate(restrictedRole);
+			roleDao.saveOrUpdate(adminRole);
+
+			// Standarduser - has to be changed on first login
+			User admin = new User(Permutation.hashString("admin"), "admin", adminRole.getId(), false);
+
+			// Guestuser - can be edited to give a user without an account
+			// rights
+			User guest = new User(Permutation.hashString("guest"), "guest", guestRole.getId(), false);
+
+			// Transfers users to databse.
+			userDao.saveOrUpdate(guest);
+			userDao.saveOrUpdate(admin);
+		}
 	}
 }

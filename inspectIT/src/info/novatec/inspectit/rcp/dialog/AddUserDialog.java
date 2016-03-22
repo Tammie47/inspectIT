@@ -23,6 +23,7 @@ import org.eclipse.swt.widgets.Combo;
 import info.novatec.inspectit.communication.data.cmr.Role;
 import info.novatec.inspectit.communication.data.cmr.User;
 import info.novatec.inspectit.rcp.repository.CmrRepositoryDefinition;
+
 /**
  * Dialog to add a new user.
  * 
@@ -47,7 +48,7 @@ public class AddUserDialog extends TitleAreaDialog {
 	 * password text box.
 	 */
 	private Text passwordBox;
-	
+
 	/**
 	 * Boolean to see if user is locked.
 	 */
@@ -57,42 +58,44 @@ public class AddUserDialog extends TitleAreaDialog {
 	 * Add user button.
 	 */
 	private Button addButton;
-	
+
 	/**
 	 * Reset button id.
 	 */
-	private static final int ADD_ID = 0; //IDialogConstants.OK_ID;
+	private static final int ADD_ID = 0; // IDialogConstants.OK_ID;
 
 	/**
 	 * List of all Users.
 	 */
 	private List<String> userList;
-	
+
 	/**
 	 * List of all Roles.
 	 */
 	private List<Role> rolesList;
-	
+
 	/**
 	 * Dropdown menu for roles.
 	 */
 	private Combo roles;
+
 	/**
 	 * Default constructor.
+	 * 
 	 * @param parentShell
-	 * 				Parent {@link Shell} to create Dialog on
+	 *            Parent {@link Shell} to create Dialog on
 	 * @param cmrRepositoryDefinition
-	 * CmrRepositoryDefinition for easy access to security services.
+	 *            CmrRepositoryDefinition for easy access to security services.
 	 */
-	
+
 	public AddUserDialog(Shell parentShell, CmrRepositoryDefinition cmrRepositoryDefinition) {
 		super(parentShell);
 		this.cmrRepositoryDefinition = cmrRepositoryDefinition;
 		rolesList = cmrRepositoryDefinition.getSecurityService().getAllRoles();
 		userList = cmrRepositoryDefinition.getSecurityService().getAllUsers();
-		
 
 	}
+
 	/**
 	 * {@inheritDoc}
 	 */
@@ -101,6 +104,7 @@ public class AddUserDialog extends TitleAreaDialog {
 		super.create();
 		this.setTitle("Add User");
 	}
+
 	/**
 	 * {@inheritDoc}
 	 */
@@ -122,22 +126,22 @@ public class AddUserDialog extends TitleAreaDialog {
 		mailLabel.setText("E-mail:");
 		mailBox = new Text(main, SWT.BORDER);
 		mailBox.setLayoutData(new GridData(SWT.FILL, SWT.CENTER, true, false));
-		
+
 		Label passwordLabel = new Label(main, SWT.NONE);
 		passwordLabel.setLayoutData(new GridData(SWT.BEGINNING, SWT.CENTER, false, false));
 		passwordLabel.setText("Password:");
 		passwordBox = new Text(main, SWT.BORDER | SWT.PASSWORD);
 		passwordBox.setLayoutData(new GridData(SWT.FILL, SWT.CENTER, true, false));
-		
+
 		Label rolesLabel = new Label(main, SWT.NONE);
 		rolesLabel.setLayoutData(new GridData(SWT.BEGINNING, SWT.CENTER, false, false));
 		rolesLabel.setText("Role:");
 		roles = new Combo(main, SWT.READ_ONLY);
-	    for (Role role : rolesList) {
-	    	roles.add(role.getTitle());
-	    }
-	    roles.setText("");
-	    
+		for (Role role : rolesList) {
+			roles.add(role.getTitle());
+		}
+		roles.setText("");
+
 		ModifyListener modifyListener = new ModifyListener() {
 			@Override
 			public void modifyText(ModifyEvent e) {
@@ -148,11 +152,11 @@ public class AddUserDialog extends TitleAreaDialog {
 				}
 			}
 		};
-		
+
 		mailBox.addModifyListener(modifyListener);
 		passwordBox.addModifyListener(modifyListener);
 		roles.addModifyListener(modifyListener);
-		
+
 		final Button checkBox = new Button(main, SWT.CHECK);
 		checkBox.setText("Lock user?");
 		checkBox.setSelection(isLocked);
@@ -160,17 +164,17 @@ public class AddUserDialog extends TitleAreaDialog {
 			@Override
 			public void widgetSelected(SelectionEvent e) {
 				boolean selected = checkBox.getSelection();
-                if (selected) {
-                	isLocked = true;
-                } else {
-                	isLocked = false;
-                }
-            }
+				if (selected) {
+					isLocked = true;
+				} else {
+					isLocked = false;
+				}
+			}
 		});
-		
 
 		return main;
 	}
+
 	/**
 	 * {@inheritDoc}
 	 */
@@ -180,7 +184,7 @@ public class AddUserDialog extends TitleAreaDialog {
 		addButton.setEnabled(false);
 		createButton(parent, IDialogConstants.CANCEL_ID, IDialogConstants.CLOSE_LABEL, false);
 	}
-	
+
 	/**
 	 * {@inheritDoc}
 	 */
@@ -192,7 +196,7 @@ public class AddUserDialog extends TitleAreaDialog {
 			cancelPressed();
 		}
 	}
-	
+
 	/**
 	 * Adds the new user to database.
 	 */
@@ -203,21 +207,22 @@ public class AddUserDialog extends TitleAreaDialog {
 		}
 		long id = 0;
 		int index = roles.getSelectionIndex();
-	    String mail = mailBox.getText();
-	    String password = passwordBox.getText();
-	    String role = roles.getItem(index);
-	    for (Role r : rolesList) {
-	    	if (r.getTitle().equals(role)) {
-	    		id = r.getId();
-	    	}
-	    }
-	    User user = new User(password, mail , id, isLocked);
-	    cmrRepositoryDefinition.getSecurityService().addUser(user);
+		String mail = mailBox.getText();
+		String password = passwordBox.getText();
+		String role = roles.getItem(index);
+		for (Role r : rolesList) {
+			if (r.getTitle().equals(role)) {
+				id = r.getId();
+			}
+		}
+		User user = new User(password, mail, id, isLocked);
+		cmrRepositoryDefinition.getSecurityService().addUser(user);
 		okPressed();
 	}
-	
+
 	/**
 	 * Checks if the input is not null.
+	 * 
 	 * @return true if not null.
 	 */
 	private boolean isInputValid() {
@@ -229,8 +234,8 @@ public class AddUserDialog extends TitleAreaDialog {
 		}
 		if ("".equals(roles.getText())) {
 			return false;
-		} 
+		}
 		return true;
 	}
-	
+
 }
