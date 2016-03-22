@@ -1,9 +1,6 @@
 package info.novatec.inspectit.cmr.security;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Iterator;
-import java.util.List;
-
 import org.springframework.beans.factory.annotation.Autowired;
 import info.novatec.inspectit.cmr.dao.PermissionDao;
 import info.novatec.inspectit.cmr.dao.RoleDao;
@@ -17,7 +14,6 @@ import info.novatec.inspectit.communication.data.cmr.User;
  * 
  * @author Joshua Hartmann
  * @author Lucca Hellriegel
- * @author Thomas Sachs
  *
  */
 public class SecurityInitialization {	
@@ -41,31 +37,24 @@ public class SecurityInitialization {
 	 * Initializes the database with the given roles and permissions.
 	 */
 	public void start() {
-
-		
-		Permission cmrRecordingPermission = new Permission("cmrRecordingPermission", "Permission to start recording from Agent");
-		Permission cmrShutdownAndRestartPermission = new Permission("cmrShutdownAndRestartPermission", "Permission for shutting down and restarting the CMR");
-		Permission cmrDeleteAgentPermission = new Permission("cmrDeleteAgentPermission", "Permission for deleting an Agent");
-		Permission cmrStoragePermission = new Permission("cmrStoragePermission", "Permission for accessing basic storage options");
-		Permission cmrAdministrationPermission = new Permission("cmrAdministrationPermission", "Permission for accessing the CMR Administration");
-		Permission cmrLookAtAgentsPermission = new Permission("cmrLookAtAgentsPermission", "General permission to look at agents.");
-
-		List<Permission> permissionsList = new ArrayList<Permission>();
-
-		permissionsList.add(cmrRecordingPermission);
-		permissionsList.add(cmrShutdownAndRestartPermission);
-		permissionsList.add(cmrDeleteAgentPermission);
-		permissionsList.add(cmrStoragePermission);
-		permissionsList.add(cmrAdministrationPermission);
-		permissionsList.add(cmrLookAtAgentsPermission);
-
 		if (permissionDao.loadAll().isEmpty()) {
+
+			Permission cmrRecordingPermission = new Permission("cmrRecordingPermission", "Permission to start recording from Agent");
+			Permission cmrShutdownAndRestartPermission = new Permission("cmrShutdownAndRestartPermission", "Permission for shutting down and restarting the CMR");
+			Permission cmrDeleteAgentPermission = new Permission("cmrDeleteAgentPermission", "Permission for deleting an Agent");
+			Permission cmrStoragePermission = new Permission("cmrStoragePermission", "Permission for accessing basic storage options");
+			Permission cmrAdministrationPermission = new Permission("cmrAdministrationPermission", "Permission for accessing the CMR Administration");
+			Permission cmrLookAtAgentsPermission = new Permission("cmrLookAtAgentsPermission", "General permission to look at agents.");
+
 			
 			//Transfers permissions to database.
-			for (Permission permission : permissionsList) {
-					permissionDao.saveOrUpdate(permission);
-			}
-
+			permissionDao.saveOrUpdate(cmrRecordingPermission);
+			permissionDao.saveOrUpdate(cmrShutdownAndRestartPermission);
+			permissionDao.saveOrUpdate(cmrDeleteAgentPermission);
+			permissionDao.saveOrUpdate(cmrStoragePermission);
+			permissionDao.saveOrUpdate(cmrAdministrationPermission);
+			permissionDao.saveOrUpdate(cmrLookAtAgentsPermission);
+			
 			//Predefined roles
 			Role guestRole = new Role("guestRole", new ArrayList<Permission>(), "The role of a guest-user.");
 			Role restrictedRole = new Role("restrictedRole", Arrays.asList(cmrRecordingPermission, cmrStoragePermission, cmrLookAtAgentsPermission), "The role of a restricted-user.");
@@ -85,13 +74,6 @@ public class SecurityInitialization {
 			//Transfers users to databse.		
 			userDao.saveOrUpdate(guest);
 			userDao.saveOrUpdate(admin);			
-		}	
-		else {
-			for (Permission permission : permissionsList) {
-				if(permissionDao.findByTitle(permission.getTitle()) == null){
-					permissionDao.saveOrUpdate(permission);
-				}
-			}
-		}
+		}		
 	}
 }
