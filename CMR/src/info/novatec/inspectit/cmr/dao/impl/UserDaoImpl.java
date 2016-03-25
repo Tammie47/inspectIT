@@ -33,10 +33,11 @@ public class UserDaoImpl extends AbstractJpaDao<User>implements UserDao {
 	 * {@inheritDoc}
 	 */
 	@Override
-	public void delete(User user) {
-		EntityManager em = getEntityManager();
-		em.remove(em.getReference(User.class, user.getId()));
 
+	@Transactional
+	public void delete(User user) {
+		EntityManager em = getEntityManager();		
+		em.remove(em.merge(user));
 	}
 
 	/**

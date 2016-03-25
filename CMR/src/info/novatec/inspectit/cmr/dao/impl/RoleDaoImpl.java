@@ -32,9 +32,10 @@ public class RoleDaoImpl extends AbstractJpaDao<Role>implements RoleDao {
 	 * {@inheritDoc}
 	 */
 	@Override
+	@Transactional
 	public void delete(Role role) {
-		EntityManager em = getEntityManager();
-		em.remove(em.getReference(Role.class, role.getId()));
+		EntityManager em = getEntityManager();		
+		em.remove(em.merge(role));
 	}
 
 	/**
