@@ -67,7 +67,7 @@ public class KryoHttpInvokerServiceExporter extends HttpInvokerServiceExporter {
 
 			ISerializer serializer = serializationManagerProvider.createSerializer();
 						
-			// if there is session id write it first, or null if there is not
+			// if there is a session id write it first, or null if there is not
 			Object sessionId = sessionAwareSecureExecutor.getSessionId();
 			serializer.serialize(sessionId, output);
 			

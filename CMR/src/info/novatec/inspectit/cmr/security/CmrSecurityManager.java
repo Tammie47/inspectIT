@@ -2,6 +2,7 @@ package info.novatec.inspectit.cmr.security;
 
 import info.novatec.inspectit.spring.logger.Log;
 
+import org.apache.shiro.SecurityUtils;
 import org.apache.shiro.authc.AuthenticationException;
 import org.apache.shiro.authc.AuthenticationInfo;
 import org.apache.shiro.authc.AuthenticationToken;
@@ -43,5 +44,26 @@ public class CmrSecurityManager extends DefaultWebSecurityManager {
 	@Override
 	public AuthenticationInfo authenticate(AuthenticationToken token) throws AuthenticationException {
 		return cmrRealm.doGetAuthenticationInfo(token);
+	}
+	
+	/**
+	 * Method to check if the current subject is permitted.
+	 * @param permission
+	 * 			The permission to check.
+	 * @return
+	 * 			True if the current subject is permitted.
+	 * 
+	 */
+	public boolean isPermitted(String permission) {
+		return SecurityUtils.getSubject().isPermitted(permission);
+	}
+	
+	/**
+	 * Method to check if the current subject is authenticated.
+	 * @return
+	 * 			True if the current subject is authenticated.
+	 */
+	public boolean isAuthenticated() {
+		return SecurityUtils.getSubject().isAuthenticated();
 	}
 }

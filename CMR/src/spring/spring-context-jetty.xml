@@ -263,8 +263,20 @@
 	<!-- END -->
 	
 	<!-- SHIRO FILTER -->
+	<bean id="authorizationFilter" class="info.novatec.inspectit.cmr.security.SessionAwarePermissionsAuthorizationFilter" />
+	
 	<bean id="shiroFilter" class="org.apache.shiro.spring.web.ShiroFilterFactoryBean">
 		<property name="securityManager" ref="cmrSecurityManager" />
+		<property name="filters">
+        	<util:map>
+            	<entry key="permissions" value-ref="authorizationFilter"/>
+        	</util:map>
+    	</property>
+		<property name="filterChainDefinitions">
+			<value>
+				/fileupload = permissions[cmrStoragePermission]
+			</value>
+		</property>
 	</bean>
 	
 	<bean id="shiroFilterHolder" class="org.mortbay.jetty.servlet.FilterHolder">
