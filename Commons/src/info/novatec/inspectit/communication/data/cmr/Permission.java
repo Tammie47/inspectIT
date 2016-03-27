@@ -189,17 +189,79 @@ public class Permission implements Comparable<Permission>, Serializable {
 	}
 
 	/**
-	 * Comparision based on the ID.
+	 * Comparison based on the id of the permissions.
 	 * 
 	 * @param o
 	 *            the other permission.
-	 * @return this.getId().compareTo(o.getId())
+	 * @return 0 if both ids are null, -1 if only this id is null, otherwise this.getId().compareTo(o.getId())
 	 */
-	public int compareTo(Permission o) {
-		if (getId() == null) {
-			return -1;
+	public int compareTo(Permission o) {		
+		if (getId() == null && o.getId() == null) {
+			if (o.getId() == null) {
+				return 0;
+			} else {
+				return -1;
+			}
 		} else {
 			return getId().compareTo(o.getId());
 		}
+	}
+	
+	
+	/**
+	 * {@inheritDoc}
+	 */
+	@Override
+	public int hashCode() {
+		final int prime = 31;
+		int result = 1;
+		result = prime * result + ((title == null) ? 0 : title.hashCode());
+		result = prime * result + ((description == null) ? 0 : description.hashCode());
+		result = prime * result + ((id == null) ? 0 : id.hashCode());
+		result = prime * result + ((parameter == null) ? 0 : parameter.hashCode());
+		return result;
+	}
+	
+	@Override
+	public boolean equals(Object obj) {
+		if (this == obj) {
+			return true;
+		}
+		if (obj == null) {
+			return false;
+		}
+		if (getClass() != obj.getClass()) {
+			return false;
+		}
+		Permission other = (Permission) obj;
+		if (title == null) {
+			if (other.getTitle() != null) {
+				return false;
+			}
+		} else if (!title.equals(other.title)) {
+			return false;
+		}
+		if (description == null) {
+			if (other.description != null) {
+				return false;
+			}
+		} else if (!description.equals(other.description)) {
+			return false;
+		}
+		if (id == null) {
+			if (other.id != null) {
+				return false;
+			}
+		} else if (!id.equals(other.id)) {
+			return false;
+		}
+		if (parameter == null) {
+			if (other.parameter != null) {
+				return false;
+			}
+		} else if (!parameter.equals(other.parameter)) {
+			return false;
+		}
+		return true;
 	}
 }
