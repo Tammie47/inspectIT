@@ -33,7 +33,6 @@ public class UserDaoImpl extends AbstractJpaDao<User>implements UserDao {
 	 * {@inheritDoc}
 	 */
 	@Override
-
 	@Transactional
 	public void delete(User user) {
 		EntityManager em = getEntityManager();		
@@ -44,6 +43,7 @@ public class UserDaoImpl extends AbstractJpaDao<User>implements UserDao {
 	 * {@inheritDoc}
 	 */
 	@Override
+	@Transactional
 	public void deleteAll(List<User> users) {
 		for (User user : users) {
 			delete(user);

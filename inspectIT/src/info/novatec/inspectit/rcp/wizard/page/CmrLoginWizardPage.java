@@ -45,6 +45,19 @@ public class CmrLoginWizardPage extends WizardPage {
 	}
 
 	/**
+	 * Checkbox for staying logged in. 
+	 */
+	Button stayLoggedIn;
+	
+	/**
+	 * Check if users should stay logged in.
+	 * @return if users should stay logged in.
+	 */
+	public boolean shouldStayLoggedIn() {
+		return stayLoggedIn.getSelection();
+	}
+	
+	/**
 	 * Default constructor.
 	 * 
 	 * @param title
@@ -93,6 +106,9 @@ public class CmrLoginWizardPage extends WizardPage {
 				}
 			}
 		});
+
+		stayLoggedIn = new Button(main, SWT.CHECK);
+		stayLoggedIn.setText("Stay logged in?");
 
 		Listener pageModifyListener = new Listener() {
 

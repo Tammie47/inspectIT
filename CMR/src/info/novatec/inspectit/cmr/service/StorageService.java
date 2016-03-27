@@ -2,6 +2,7 @@ package info.novatec.inspectit.cmr.service;
 
 import info.novatec.inspectit.cmr.dao.StorageDataDao;
 import info.novatec.inspectit.cmr.security.CmrSecurityManager;
+import info.novatec.inspectit.cmr.service.rest.unsafe.IUnsafeEntryForStorageService;
 import info.novatec.inspectit.cmr.spring.aop.MethodLog;
 import info.novatec.inspectit.cmr.storage.CmrStorageManager;
 import info.novatec.inspectit.communication.DefaultData;
@@ -44,7 +45,7 @@ import org.springframework.transaction.annotation.Transactional;
  * 
  */
 @Service
-public class StorageService implements IStorageService {
+public class StorageService implements IStorageService, IUnsafeEntryForStorageService {
 
 	/** The logger of this class. */
 	@Log
@@ -78,10 +79,6 @@ public class StorageService implements IStorageService {
 	 */
 	@MethodLog
 	public void createStorage(StorageData storageData) throws BusinessException {
-		if (!securityManager.isPermitted("cmrStoragePermission")) {
-			return;
-		}
-		
 		try {
 			storageManager.createStorage(storageData);
 		} catch (SerializationException e) {
@@ -102,10 +99,6 @@ public class StorageService implements IStorageService {
 	 */
 	@MethodLog
 	public void openStorage(StorageData storageData) throws BusinessException {
-		if (!securityManager.isPermitted("cmrStoragePermission")) {
-			return;
-		}
-		
 		if (!storageManager.isStorageExisting(storageData)) {
 			throw new BusinessException("Open the storage " + storageData + ".", StorageErrorCodeEnum.STORAGE_DOES_NOT_EXIST);
 		}
@@ -125,8 +118,13 @@ public class StorageService implements IStorageService {
 	public StorageData createAndOpenStorage(StorageData storageData) throws BusinessException {
 		if (!securityManager.isPermitted("cmrStoragePermission")) {
 			return null;
+		} else {
+			return unsafeCreateAndOpenStorage(storageData);
 		}
-		
+	}
+	
+	@Override
+	public StorageData unsafeCreateAndOpenStorage(StorageData storageData) throws BusinessException {
 		this.createStorage(storageData);
 		this.openStorage(storageData);
 		return storageData;
@@ -141,8 +139,13 @@ public class StorageService implements IStorageService {
 	public void closeStorage(StorageData storageData) throws BusinessException {
 		if (!securityManager.isPermitted("cmrStoragePermission")) {
 			return;
+		} else {
+			unsafeCloseStorage(storageData);
 		}
-		
+	}
+	
+	@Override
+	public void unsafeCloseStorage(StorageData storageData) throws BusinessException {
 		try {
 			storageManager.closeStorage(storageData);
 		} catch (SerializationException e) {
@@ -159,8 +162,13 @@ public class StorageService implements IStorageService {
 	public void deleteStorage(StorageData storageData) throws BusinessException {
 		if (!securityManager.isPermitted("cmrStoragePermission")) {
 			return;
+		} else {
+			unsafeDeleteStorage(storageData);
 		}
-		
+	}
+	
+	@Override
+	public void unsafeDeleteStorage(StorageData storageData) throws BusinessException {
 		try {
 			storageManager.deleteStorage(storageData);
 		} catch (IOException e) {
@@ -191,9 +199,14 @@ public class StorageService implements IStorageService {
 	public List<StorageData> getExistingStorages() {
 		if (!securityManager.isAuthenticated()) {
 			return new ArrayList<StorageData>();
+		} else {
+			log.info("User: " + SecurityUtils.getSubject().getPrincipal());
+			return unsafeGetExistingStorages();
 		}
-		
-		log.info("User: " + SecurityUtils.getSubject().getPrincipal());
+	}
+	
+	@Override
+	public List<StorageData> unsafeGetExistingStorages() {
 		return storageManager.getExistingStorages();
 	}
 
@@ -220,8 +233,13 @@ public class StorageService implements IStorageService {
 	public StorageData startOrScheduleRecording(StorageData storageData, RecordingProperties recordingProperties) throws BusinessException {
 		if (!securityManager.isPermitted("cmrRecordingPermission")) {
 			return null;
+		} else {
+			return unsafeStartOrScheduleRecording(storageData, recordingProperties);
 		}
-		
+	}
+	
+	@Override
+	public StorageData unsafeStartOrScheduleRecording(StorageData storageData, RecordingProperties recordingProperties) throws BusinessException {
 		if ((storageManager.getRecordingState() == RecordingState.ON || storageManager.getRecordingState() == RecordingState.SCHEDULED) && !storageData.equals(storageManager.getRecordingStorage())) {
 			throw new BusinessException("Start or schedule recording on the storage " + storageData + ".", StorageErrorCodeEnum.CAN_NOT_START_RECORDING);
 		} else if (storageManager.getRecordingState() == RecordingState.ON || storageManager.getRecordingState() == RecordingState.SCHEDULED) {
@@ -245,8 +263,13 @@ public class StorageService implements IStorageService {
 	public void stopRecording() throws BusinessException {
 		if (!securityManager.isPermitted("cmrRecordingPermission")) {
 			return;
+		} else {
+			unsafeStopRecording();
 		}
-		
+	}
+	
+	@Override
+	public void unsafeStopRecording() throws BusinessException {
 		try {
 			storageManager.stopRecording();
 		} catch (SerializationException e) {
@@ -391,8 +414,13 @@ public class StorageService implements IStorageService {
 	public StorageData addLabelToStorage(StorageData storageData, AbstractStorageLabel<?> storageLabel, boolean doOverwrite) throws BusinessException {
 		if (!securityManager.isPermitted("cmrStoragePermission")) {
 			return storageManager.getStorageData(storageData.getId());
+		} else {
+			return unsafeAddLabelToStorage(storageData, storageLabel, doOverwrite);
 		}
-		
+	}
+	
+	@Override
+	public StorageData unsafeAddLabelToStorage(StorageData storageData, AbstractStorageLabel<?> storageLabel, boolean doOverwrite) throws BusinessException {
 		try {
 			storageManager.addLabelToStorage(storageData, storageLabel, doOverwrite);
 			storageLabelDataDao.saveLabel(storageLabel);
@@ -403,6 +431,7 @@ public class StorageService implements IStorageService {
 			throw new TechnicalException("Add a label to the storage " + storageData + ".", StorageErrorCodeEnum.INPUT_OUTPUT_OPERATION_FAILED, e);
 		}
 	}
+	
 
 	/**
 	 * {@inheritDoc}
@@ -412,8 +441,13 @@ public class StorageService implements IStorageService {
 	public StorageData addLabelsToStorage(StorageData storageData, Collection<AbstractStorageLabel<?>> storageLabels, boolean doOverwrite) throws BusinessException {
 		if (!securityManager.isPermitted("cmrStoragePermission")) {
 			return storageManager.getStorageData(storageData.getId());
+		} else {
+			return unsafeAddLabelsToStorage(storageData, storageLabels, doOverwrite);
 		}
-		
+	}
+	
+	@Override
+	public StorageData unsafeAddLabelsToStorage(StorageData storageData, Collection<AbstractStorageLabel<?>> storageLabels, boolean doOverwrite) throws BusinessException {
 		try {
 			for (AbstractStorageLabel<?> storageLabel : storageLabels) {
 				storageManager.addLabelToStorage(storageData, storageLabel, doOverwrite);
@@ -435,8 +469,13 @@ public class StorageService implements IStorageService {
 	public StorageData removeLabelFromStorage(StorageData storageData, AbstractStorageLabel<?> storageLabel) throws BusinessException {
 		if (!securityManager.isPermitted("cmrStoragePermission")) {
 			return storageManager.getStorageData(storageData.getId());
+		} else {
+			return unsafeRemoveLabelFromStorage(storageData, storageLabel);
 		}
-		
+	}
+	
+	@Override
+	public StorageData unsafeRemoveLabelFromStorage(StorageData storageData, AbstractStorageLabel<?> storageLabel) throws BusinessException {
 		try {
 			storageManager.removeLabelFromStorage(storageData, storageLabel);
 			return storageManager.getStorageData(storageData.getId());
@@ -455,8 +494,13 @@ public class StorageService implements IStorageService {
 	public StorageData removeLabelsFromStorage(StorageData storageData, List<AbstractStorageLabel<?>> storageLabelList) throws BusinessException {
 		if (!securityManager.isPermitted("cmrStoragePermission")) {
 			return storageManager.getStorageData(storageData.getId());
+		} else {
+			return unsafeRemoveLabelsFromStorage(storageData, storageLabelList);
 		}
-		
+	}
+	
+	@Override
+	public StorageData unsafeRemoveLabelsFromStorage(StorageData storageData, List<AbstractStorageLabel<?>> storageLabelList) throws BusinessException {
 		try {
 			for (AbstractStorageLabel<?> label : storageLabelList) {
 				storageManager.removeLabelFromStorage(storageData, label);
@@ -600,8 +644,13 @@ public class StorageService implements IStorageService {
 	public void updateStorageData(StorageData storageData) throws BusinessException {
 		if (!securityManager.isPermitted("cmrStoragePermission")) {
 			return;
+		} else {
+			unsafeUpdateStorageData(storageData);
 		}
-		
+	}
+	
+	@Override
+	public void unsafeUpdateStorageData(StorageData storageData) throws BusinessException {
 		try {
 			storageManager.updateStorageData(storageData);
 		} catch (SerializationException e) {

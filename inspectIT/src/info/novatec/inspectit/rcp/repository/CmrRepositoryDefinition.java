@@ -17,6 +17,7 @@ import info.novatec.inspectit.cmr.service.cache.CachedDataService;
 import info.novatec.inspectit.communication.data.cmr.Permission;
 import info.novatec.inspectit.communication.data.cmr.Permutation;
 import info.novatec.inspectit.rcp.InspectIT;
+import info.novatec.inspectit.rcp.preferences.PreferencesUtils;
 import info.novatec.inspectit.rcp.provider.ICmrRepositoryProvider;
 import info.novatec.inspectit.rcp.repository.service.RefreshEditorsCachedDataService;
 import info.novatec.inspectit.rcp.repository.service.cmr.CmrServiceProvider;
@@ -719,4 +720,19 @@ public class CmrRepositoryDefinition implements RepositoryDefinition, ICmrReposi
 		}
 		return false; 
 	}
+
+	/**
+	 * Saves password and email to preferenceStore to make user able to stay
+	 * logged in.
+	 * 
+	 * @param email
+	 *            Email of user.
+	 * @param pw
+	 *            Password of user.
+	 */
+	public void stayLoggedIn(String email, String pw) {
+		PreferencesUtils.saveStringValue(this.ip + ":" + this.port + "EMAIL", email, false);
+		PreferencesUtils.saveStringValue(this.ip + ":" + this.port + "PW", pw, false);
+	}
+			
 }
