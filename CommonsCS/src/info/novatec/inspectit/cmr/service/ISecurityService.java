@@ -123,6 +123,14 @@ public interface ISecurityService {
 	 *            role
 	 */
 	void deleteRole(Role role);
+	/**
+	 * 
+	 * @param role
+	 * 			the role that is edited.
+	 * @return
+	 * 			true if role equals currentUser's role, else false
+	 */
+	boolean checkCurrentRole(Role role);
 
 	// | USER |---------------
 	/**

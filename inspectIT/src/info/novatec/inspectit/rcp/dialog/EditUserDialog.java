@@ -145,7 +145,7 @@ public class EditUserDialog extends TitleAreaDialog {
 			roles.add(role.getTitle());
 		}
 		for (Role role : rolesList) {
-			if (role.getId() == userOld.getRoleId()) {
+			if (role.getId().equals(userOld.getRoleId())) {
 				roles.select(roles.indexOf(role.getTitle()));
 			}
 		}
@@ -164,7 +164,6 @@ public class EditUserDialog extends TitleAreaDialog {
 				}
 			}
 		});
-
 		return main;
 	}
 
@@ -192,6 +191,7 @@ public class EditUserDialog extends TitleAreaDialog {
 		} else if (IDialogConstants.CANCEL_ID == buttonId) {
 			cancelPressed();
 		}
+		
 	}
 
 	/**
@@ -219,6 +219,7 @@ public class EditUserDialog extends TitleAreaDialog {
 		cmrRepositoryDefinition.getSecurityService().changeUserAttribute(userOld, mail, password, id, passwordChanged,
 				isLocked);
 		okPressed();
+		
 	}
 
 	/**
@@ -265,6 +266,5 @@ public class EditUserDialog extends TitleAreaDialog {
 		}
 		cmrRepositoryDefinition.getSecurityService().deleteUser(userOld);
 		okPressed();
-
 	}
 }

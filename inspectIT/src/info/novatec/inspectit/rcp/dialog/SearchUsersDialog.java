@@ -138,11 +138,17 @@ public class SearchUsersDialog extends TitleAreaDialog {
 
 		table.addSelectionListener(new SelectionAdapter() {
 			public void widgetSelected(SelectionEvent e) {
+				boolean selfEditing = false;
 				if (table.getSelectionIndex() != -1) {
 					TableItem[] tableItems = table.getItems();
 					User user = cmrRepositoryDefinition.getSecurityService()
 							.getUser(tableItems[table.getSelectionIndex()].getText(0));
+					selfEditing = cmrRepositoryDefinition.getSecurityService().checkCurrentUser(user);
 					userDialog(main.getShell(), user);
+					if (selfEditing) {
+						main.getShell().getParent().getShell().close();
+						okPressed();
+					}
 				}
 			}
 		});
@@ -257,7 +263,6 @@ public class SearchUsersDialog extends TitleAreaDialog {
 	private void userDialog(Shell parentShell, User user) {
 		editUserDialog = new EditUserDialog(parentShell, cmrRepositoryDefinition, user);
 		editUserDialog.open();
-		parentShell.close();
 	}
 
 }
