@@ -102,6 +102,7 @@ public class ShowAllRolesDialog extends TitleAreaDialog {
 		updateTable();
 		table.addSelectionListener(new SelectionAdapter() {
 			public void widgetSelected(SelectionEvent e) {
+				boolean selfEditing = false;
 				if (table.getSelectionIndex() != -1) {
 					TableItem[] tableItems = table.getItems();
 					long id = 0;
@@ -111,9 +112,15 @@ public class ShowAllRolesDialog extends TitleAreaDialog {
 						}
 					}
 					Role role = cmrRepositoryDefinition.getSecurityService().getRoleByID(id);
+					selfEditing = cmrRepositoryDefinition.getSecurityService().checkCurrentRole(role);
 					roleDialog(main.getShell(), role);
-					roles = cmrRepositoryDefinition.getSecurityService().getAllRoles();
-					updateTable();
+					if (!selfEditing) {
+						roles = cmrRepositoryDefinition.getSecurityService().getAllRoles();
+						updateTable();
+					} else {
+						main.getShell().getParent().getShell().close();
+						okPressed();
+					}
 				}
 			}
 		});

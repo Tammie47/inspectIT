@@ -83,11 +83,6 @@ public class EditUserDialog extends TitleAreaDialog {
 	 * Delete user button id.
 	 */
 	private static final int DELETE_USER_ID = 2;
-	
-	/**
-	 * Boolean to check if you are editing yourself.
-	 */
-	boolean selfEditing = false;
 
 	/**
 	 * Default constructor.
@@ -105,7 +100,6 @@ public class EditUserDialog extends TitleAreaDialog {
 		rolesList = cmrRepositoryDefinition.getSecurityService().getAllRoles();
 		userOld = user;
 		isLocked = userOld.isLocked();
-		selfEditing = cmrRepositoryDefinition.getSecurityService().checkCurrentUser(user);
 	}
 
 	/**
@@ -170,7 +164,6 @@ public class EditUserDialog extends TitleAreaDialog {
 				}
 			}
 		});
-
 		return main;
 	}
 
@@ -193,16 +186,8 @@ public class EditUserDialog extends TitleAreaDialog {
 	protected void buttonPressed(int buttonId) {
 		if (EDIT_ID == buttonId) {
 			editPressed();
-			if (selfEditing) {
-				this.getParentShell().close();
-			}
-			okPressed();
 		} else if (DELETE_USER_ID == buttonId) {
 			deletePressed();
-			if (selfEditing) {
-				this.getParentShell().close();
-			}
-			okPressed();
 		} else if (IDialogConstants.CANCEL_ID == buttonId) {
 			cancelPressed();
 		}
@@ -233,6 +218,7 @@ public class EditUserDialog extends TitleAreaDialog {
 		}
 		cmrRepositoryDefinition.getSecurityService().changeUserAttribute(userOld, mail, password, id, passwordChanged,
 				isLocked);
+		okPressed();
 		
 	}
 
@@ -279,7 +265,6 @@ public class EditUserDialog extends TitleAreaDialog {
 			return;
 		}
 		cmrRepositoryDefinition.getSecurityService().deleteUser(userOld);
-		
-
+		okPressed();
 	}
 }

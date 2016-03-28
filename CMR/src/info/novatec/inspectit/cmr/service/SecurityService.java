@@ -350,7 +350,9 @@ public class SecurityService implements ISecurityService {
 	public boolean checkCurrentUser(User user) {
 		Subject currentUser = SecurityUtils.getSubject();
 		String currentName = (String) currentUser.getPrincipal();
-		System.out.println(currentName.equals(user.getEmail()));
+		if (currentName.equals(user.getEmail())) {
+			return true;
+		}
 		return false;
 	}
 	// | PERMISSION |---------
@@ -488,7 +490,16 @@ public class SecurityService implements ISecurityService {
 		
 		roleDao.delete(role);
 	}
-
+	
+	@Override
+	public boolean checkCurrentRole(Role role) {
+		Subject currentUser = SecurityUtils.getSubject();
+		String currentName = (String) currentUser.getPrincipal();
+		if (getRoleOfUser(currentName).getTitle().equals(role.getTitle())) {
+			return true;
+		}
+		return false;
+	}
 	@Override
 	public void resetDB() {
 		if (!securityManager.isPermitted("cmrAdministrationPermission")) {

@@ -221,7 +221,19 @@ public class EditRoleDialog extends TitleAreaDialog {
 			}
 			if (!stillAdmin && adminRoles.size() < 2) {
 				MessageDialog.openWarning(null, "Warning",
-						"This role can not be deleted. Please make sure there is at least one admin role remaining.");
+						"This edited can not be performed. Please make sure that there is at least one role with the CmrAdministrationPermission.");
+				return;
+			}
+			boolean adminUsersLeft = false;
+			for (Role role : adminRoles) {
+				List<String> userList = cmrRepositoryDefinition.getSecurityService().getUsersByRole(role.getId());
+				if ((role.getId() != roleOld.getId()) && !userList.isEmpty()) {
+					adminUsersLeft = true;
+				}
+			}
+			if (!stillAdmin && !adminUsersLeft) {
+				MessageDialog.openWarning(null, "Warning",
+						"This edited can not be performed. Please make sure that there is at least one user with the CmrAdministrationPermission.");
 				return;
 			}
 		}
@@ -260,7 +272,19 @@ public class EditRoleDialog extends TitleAreaDialog {
 			}
 			if (adminRoles.size() < 2) {
 				MessageDialog.openWarning(null, "Warning",
-						"You are about to remove the last admin role. Please make sure there is at least one admin role remaining.");
+						"This role can not be deleted. Please make sure there is at least one admin role remaining.");
+				return;
+			}
+			boolean adminUsersLeft = false;
+			for (Role role : adminRoles) {
+				List<String> userList = cmrRepositoryDefinition.getSecurityService().getUsersByRole(role.getId());
+				if ((role.getId() != roleOld.getId()) && !userList.isEmpty()) {
+					adminUsersLeft = true;
+				}
+			}
+			if (!adminUsersLeft) {
+				MessageDialog.openWarning(null, "Warning",
+						"This role can not be deleted. Please make sure that there is at least one user with an admin role.");
 				return;
 			}
 		}
