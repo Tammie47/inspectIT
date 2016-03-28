@@ -123,6 +123,14 @@ public interface ISecurityService {
 	 *            role
 	 */
 	void deleteRole(Role role);
+	/**
+	 * 
+	 * @param role
+	 * 			the role that is edited.
+	 * @return
+	 * 			true if role equals currentUser's role, else false
+	 */
+	boolean checkCurrentRole(Role role);
 
 	// | USER |---------------
 	/**
@@ -186,6 +194,14 @@ public interface ISecurityService {
 	 */
 	void changeUserAttribute(User userOld, String email, String password, long roleID, boolean passwordChanged,
 			boolean isLocked);
+	/**
+	 * 
+	 * @param user
+	 * 			the user that is edited
+	 * @return
+	 * 			true if user equals currentUser, else false
+	 */
+	boolean checkCurrentUser(User user);
 
 	// | PERMISSION |---------
 

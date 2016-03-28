@@ -103,13 +103,21 @@ public class ShowAllUsersDialog extends TitleAreaDialog {
 		updateTable();
 		table.addSelectionListener(new SelectionAdapter() {
 			public void widgetSelected(SelectionEvent e) {
+				boolean selfEditing = false;
 				if (table.getSelectionIndex() != -1) {
 					TableItem[] tableItems = table.getItems();
 					User user = cmrRepositoryDefinition.getSecurityService()
 							.getUser(tableItems[table.getSelectionIndex()].getText(0));
+					selfEditing = cmrRepositoryDefinition.getSecurityService().checkCurrentUser(user);
 					userDialog(main.getShell(), user);
-					users = cmrRepositoryDefinition.getSecurityService().getAllUsers();
-					updateTable();
+					if (!selfEditing) {
+						users = cmrRepositoryDefinition.getSecurityService().getAllUsers();
+						updateTable();
+					} else {
+						main.getShell().getParent().getShell().close();
+						okPressed();
+					}
+					
 				}
 			}
 		});
