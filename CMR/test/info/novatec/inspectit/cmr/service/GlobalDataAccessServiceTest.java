@@ -4,25 +4,34 @@ import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import info.novatec.inspectit.cmr.dao.DefaultDataDao;
+import info.novatec.inspectit.cmr.dao.PermissionDao;
 import info.novatec.inspectit.cmr.dao.PlatformIdentDao;
+import info.novatec.inspectit.cmr.dao.RoleDao;
+import info.novatec.inspectit.cmr.dao.UserDao;
 import info.novatec.inspectit.cmr.model.PlatformIdent;
+import info.novatec.inspectit.cmr.security.CmrSecurityManager;
 import info.novatec.inspectit.cmr.test.AbstractTestNGLogSupport;
 import info.novatec.inspectit.cmr.util.AgentStatusDataProvider;
 import info.novatec.inspectit.communication.data.cmr.AgentStatusData;
+import info.novatec.inspectit.communication.data.cmr.Permission;
+import info.novatec.inspectit.communication.data.cmr.Permutation;
+import info.novatec.inspectit.communication.data.cmr.Role;
+import info.novatec.inspectit.communication.data.cmr.User;
 import info.novatec.inspectit.communication.data.cmr.AgentStatusData.AgentConnection;
 import info.novatec.inspectit.exception.BusinessException;
 
+import java.security.NoSuchAlgorithmException;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
 
 import org.apache.shiro.SecurityUtils;
 import org.apache.shiro.authc.UsernamePasswordToken;
-import org.apache.shiro.subject.PrincipalCollection;
-import org.apache.shiro.subject.SimplePrincipalCollection;
 import org.apache.shiro.subject.Subject;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.Test;
 
@@ -43,6 +52,19 @@ public class GlobalDataAccessServiceTest extends AbstractTestNGLogSupport {
 	@Mock
 	private AgentStatusDataProvider agentStatusProvider;
 
+	@Mock
+	UserDao userDao;
+
+	@Mock
+	PermissionDao permissionDao;
+
+	@Mock
+	RoleDao roleDao;
+	
+	@Mock
+	CmrSecurityManager securityManager;
+
+
 	/**
 	 * Initializes mocks. Has to run before each test so that mocks are clear.
 	 */
@@ -55,6 +77,22 @@ public class GlobalDataAccessServiceTest extends AbstractTestNGLogSupport {
 		globalDataAccessService.agentStatusProvider = agentStatusProvider;
 		globalDataAccessService.defaultDataDao = defaultDataDao;
 		globalDataAccessService.log = LoggerFactory.getLogger(GlobalDataAccessService.class);
+				
+		Permission cmrDeleteAgentPermission = new Permission("cmrDeleteAgentPermission",
+				null);
+		permissionDao.saveOrUpdate(cmrDeleteAgentPermission);
+		Role adminRole = new Role("adminRole", Arrays.asList(cmrDeleteAgentPermission), null);
+		roleDao.saveOrUpdate(adminRole);
+		User admin = new User("admin", "admin", 1, false);
+		try {
+			admin = new User(Permutation.hashString("admin"), "admin", 1, false);
+		} catch (NoSuchAlgorithmException e) {
+			e.printStackTrace();
+		}
+		userDao.saveOrUpdate(admin);
+		Subject subject = SecurityUtils.getSubject();
+		UsernamePasswordToken token = new UsernamePasswordToken ("admin", "admin");
+		subject.login(token);
 	}
 
 	/**
@@ -107,9 +145,6 @@ public class GlobalDataAccessServiceTest extends AbstractTestNGLogSupport {
 		map.put(platformId, agentStatusData);
 		when(agentStatusProvider.getAgentStatusDataMap()).thenReturn(map);
 
-		Subject subject = SecurityUtils.getSubject();
-		UsernamePasswordToken token = new UsernamePasswordToken ("admin", "admin");
-		subject.login(token);
 		globalDataAccessService.deleteAgent(platformId);
 
 		verify(platformIdentDao, times(1)).delete(platformIdent);
