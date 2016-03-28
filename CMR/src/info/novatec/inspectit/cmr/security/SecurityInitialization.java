@@ -1,8 +1,12 @@
 package info.novatec.inspectit.cmr.security;
 
+import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
 import java.util.Arrays;
+
+import org.slf4j.Logger;
 import org.springframework.beans.factory.annotation.Autowired;
+
 import info.novatec.inspectit.cmr.dao.PermissionDao;
 import info.novatec.inspectit.cmr.dao.RoleDao;
 import info.novatec.inspectit.cmr.dao.UserDao;
@@ -10,6 +14,8 @@ import info.novatec.inspectit.communication.data.cmr.Permission;
 import info.novatec.inspectit.communication.data.cmr.Permutation;
 import info.novatec.inspectit.communication.data.cmr.Role;
 import info.novatec.inspectit.communication.data.cmr.User;
+import info.novatec.inspectit.spring.logger.Log;
+
 import java.util.List;
 
 /**
@@ -20,6 +26,13 @@ import java.util.List;
  *
  */
 public class SecurityInitialization {
+	
+	/**
+	 * Logger of this Class.
+	 */
+	@Log
+	Logger log;
+	
 	/**
 	 * PermissionDao.
 	 */
@@ -87,12 +100,23 @@ public class SecurityInitialization {
 			roleDao.saveOrUpdate(adminRole);
 
 			// Standarduser - has to be changed on first login
-			User admin = new User(Permutation.hashString("admin"), "admin", adminRole.getId(), false);
+			User admin;
+			try {
+				admin = new User(Permutation.hashString("admin"), "admin", adminRole.getId(), false);
+			} catch (NoSuchAlgorithmException e) {
+				log.info("NoSuchAlgorithException: Failed to create password hash. User not added to database!");
+				return;
+			}
 
 			// Guestuser - can be edited to give a user without an account
 			// rights
-			User guest = new User(Permutation.hashString("guest"), "guest", guestRole.getId(), false);
-
+			User guest;
+			try {
+				guest = new User(Permutation.hashString("guest"), "guest", guestRole.getId(), false);
+			} catch (NoSuchAlgorithmException e) {
+				log.info("NoSuchAlgorithException: Failed to create password hash. User not added to database!");
+				return;
+			}
 			// Transfers users to database.
 			userDao.saveOrUpdate(guest);
 			userDao.saveOrUpdate(admin);

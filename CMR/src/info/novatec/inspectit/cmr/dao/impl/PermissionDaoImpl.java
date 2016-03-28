@@ -62,8 +62,8 @@ public class PermissionDaoImpl extends AbstractJpaDao<Permission>implements Perm
 	 */
 	@Override
 	public Permission findById(long id) {
-		TypedQuery<Permission> query = getEntityManager().createNamedQuery(Permission.FIND_BY_TITLE, Permission.class);
-		query.setParameter("id", id);
+		TypedQuery<Permission> query = getEntityManager().createNamedQuery(Permission.FIND_BY_ID, Permission.class);				
+		query.setParameter("id", id);		
 		List<Permission> results = query.getResultList();
 		if (results.isEmpty()) {
 			return null;

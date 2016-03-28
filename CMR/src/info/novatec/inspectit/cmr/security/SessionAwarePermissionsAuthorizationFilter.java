@@ -29,16 +29,16 @@ public class SessionAwarePermissionsAuthorizationFilter extends AuthorizationFil
 	/**
 	 * Is the subject who created the request permitted?
 	 * 
-	 * @param request 
-	 * 					Servlet request
-	 * @param response 
-	 * 					Servlet response
-	 * @param mappedValue 
-	 * 					Permissions
-	 * @return
-	 * 					Returns whether request has permission to proceed
-	 * @throws
-	 * 					IOException
+	 * @param request
+	 *            Servlet request
+	 * @param response
+	 *            Servlet response
+	 * @param mappedValue
+	 *            Permissions
+	 * @throws IOException
+	 *             IOException
+	 * @return Returns whether request has permission to proceed
+	 * 
 	 */
 	@Override
     public boolean isAccessAllowed(ServletRequest request, ServletResponse response, Object mappedValue) throws IOException {

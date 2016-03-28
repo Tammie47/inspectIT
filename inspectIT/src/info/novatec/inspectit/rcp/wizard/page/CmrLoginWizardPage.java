@@ -132,8 +132,7 @@ public class CmrLoginWizardPage extends WizardPage {
 	public boolean isPageComplete() {
 		if (mailBox.getText().isEmpty()) {
 			return false;
-		}
-		if (passwordBox.getText().isEmpty()) {
+		} else if (passwordBox.getText().isEmpty()) {
 			return false;
 		}
 
