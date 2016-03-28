@@ -3,7 +3,6 @@ package info.novatec.inspectit.cmr.dao.impl;
 import java.util.List;
 
 import javax.persistence.EntityManager;
-import javax.persistence.Parameter;
 import javax.persistence.TypedQuery;
 import org.springframework.stereotype.Repository;
 import org.springframework.transaction.annotation.Transactional;

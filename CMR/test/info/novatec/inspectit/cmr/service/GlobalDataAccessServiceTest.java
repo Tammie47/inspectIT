@@ -15,6 +15,11 @@ import info.novatec.inspectit.exception.BusinessException;
 import java.util.HashMap;
 import java.util.Map;
 
+import org.apache.shiro.SecurityUtils;
+import org.apache.shiro.authc.UsernamePasswordToken;
+import org.apache.shiro.subject.PrincipalCollection;
+import org.apache.shiro.subject.SimplePrincipalCollection;
+import org.apache.shiro.subject.Subject;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 import org.slf4j.LoggerFactory;
@@ -59,7 +64,10 @@ public class GlobalDataAccessServiceTest extends AbstractTestNGLogSupport {
 	public void testNonExistingAgentDelete() throws BusinessException {
 		long platformId = 10L;
 		when(platformIdentDao.load(Long.valueOf(platformId))).thenReturn(null);
-
+		
+		Subject subject = new Subject.Builder().authenticated(true).buildSubject();
+		UsernamePasswordToken token = new UsernamePasswordToken ("admin", "admin");
+		subject.login(token);
 		globalDataAccessService.deleteAgent(platformId);
 	}
 
@@ -78,6 +86,9 @@ public class GlobalDataAccessServiceTest extends AbstractTestNGLogSupport {
 		map.put(platformId, agentStatusData);
 		when(agentStatusProvider.getAgentStatusDataMap()).thenReturn(map);
 
+		Subject subject = SecurityUtils.getSubject();
+		UsernamePasswordToken token = new UsernamePasswordToken ("admin", "admin");
+		subject.login(token);
 		globalDataAccessService.deleteAgent(platformId);
 	}
 
@@ -96,6 +107,9 @@ public class GlobalDataAccessServiceTest extends AbstractTestNGLogSupport {
 		map.put(platformId, agentStatusData);
 		when(agentStatusProvider.getAgentStatusDataMap()).thenReturn(map);
 
+		Subject subject = SecurityUtils.getSubject();
+		UsernamePasswordToken token = new UsernamePasswordToken ("admin", "admin");
+		subject.login(token);
 		globalDataAccessService.deleteAgent(platformId);
 
 		verify(platformIdentDao, times(1)).delete(platformIdent);

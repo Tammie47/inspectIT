@@ -107,10 +107,10 @@ public class GlobalDataAccessService implements IGlobalDataAccessService {
 	 */
 	@MethodLog
 	public void deleteAgent(long platformId) throws BusinessException {
-	/*	if (!securityManager.isPermitted("cmrDeleteAgentPermission")) {
+		if (!securityManager.isPermitted("cmrDeleteAgentPermission")) {
 			return;
 		}
-		*/
+		
 		PlatformIdent platformIdent = platformIdentDao.load(platformId);
 		if (null != platformIdent) {
 			AgentStatusData agentStatusData = agentStatusProvider.getAgentStatusDataMap().get(platformIdent.getId());
