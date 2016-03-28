@@ -186,6 +186,14 @@ public interface ISecurityService {
 	 */
 	void changeUserAttribute(User userOld, String email, String password, long roleID, boolean passwordChanged,
 			boolean isLocked);
+	/**
+	 * 
+	 * @param user
+	 * 			the user that is edited
+	 * @return
+	 * 			true if user equals currentUser, else false
+	 */
+	boolean checkCurrentUser(User user);
 
 	// | PERMISSION |---------
 

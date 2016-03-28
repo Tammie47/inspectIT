@@ -110,6 +110,7 @@ public class ShowAllUsersDialog extends TitleAreaDialog {
 					userDialog(main.getShell(), user);
 					users = cmrRepositoryDefinition.getSecurityService().getAllUsers();
 					updateTable();
+					
 				}
 			}
 		});

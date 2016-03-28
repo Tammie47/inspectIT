@@ -335,6 +335,13 @@ public class SecurityService implements ISecurityService {
 		userDao.saveOrUpdate(userOld);
 	}
 
+	@Override
+	public boolean checkCurrentUser(User user) {
+		Subject currentUser = SecurityUtils.getSubject();
+		String currentName = (String) currentUser.getPrincipal();
+		System.out.println(currentName.equals(user.getEmail()));
+		return false;
+	}
 	// | PERMISSION |---------
 
 	@Override
