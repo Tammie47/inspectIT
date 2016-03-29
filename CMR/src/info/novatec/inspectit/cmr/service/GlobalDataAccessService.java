@@ -63,7 +63,7 @@ public class GlobalDataAccessService implements IGlobalDataAccessService {
 	 * {@link CmrSecurityManager}.
 	 */
 	@Autowired
-	private CmrSecurityManager securityManager;
+	CmrSecurityManager securityManager;
 
 	/**
 	 * {@inheritDoc}

@@ -1,39 +1,28 @@
 package info.novatec.inspectit.cmr.service;
 
+import static org.mockito.Matchers.anyString;
 import static org.mockito.Mockito.times;
-import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.*;
 import static org.mockito.Mockito.when;
+
+import java.util.HashMap;
+import java.util.Map;
+
+import org.mockito.Mock;
+import org.mockito.MockitoAnnotations;
+import org.slf4j.LoggerFactory;
+import org.testng.annotations.BeforeMethod;
+import org.testng.annotations.Test;
+
 import info.novatec.inspectit.cmr.dao.DefaultDataDao;
-import info.novatec.inspectit.cmr.dao.PermissionDao;
 import info.novatec.inspectit.cmr.dao.PlatformIdentDao;
-import info.novatec.inspectit.cmr.dao.RoleDao;
-import info.novatec.inspectit.cmr.dao.UserDao;
 import info.novatec.inspectit.cmr.model.PlatformIdent;
 import info.novatec.inspectit.cmr.security.CmrSecurityManager;
 import info.novatec.inspectit.cmr.test.AbstractTestNGLogSupport;
 import info.novatec.inspectit.cmr.util.AgentStatusDataProvider;
 import info.novatec.inspectit.communication.data.cmr.AgentStatusData;
-import info.novatec.inspectit.communication.data.cmr.Permission;
-import info.novatec.inspectit.communication.data.cmr.Permutation;
-import info.novatec.inspectit.communication.data.cmr.Role;
-import info.novatec.inspectit.communication.data.cmr.User;
 import info.novatec.inspectit.communication.data.cmr.AgentStatusData.AgentConnection;
 import info.novatec.inspectit.exception.BusinessException;
-
-import java.security.NoSuchAlgorithmException;
-import java.util.Arrays;
-import java.util.HashMap;
-import java.util.Map;
-
-import org.apache.shiro.SecurityUtils;
-import org.apache.shiro.authc.UsernamePasswordToken;
-import org.apache.shiro.subject.Subject;
-import org.mockito.Mock;
-import org.mockito.MockitoAnnotations;
-import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.testng.annotations.BeforeMethod;
-import org.testng.annotations.Test;
 
 @SuppressWarnings("PMD")
 public class GlobalDataAccessServiceTest extends AbstractTestNGLogSupport {
@@ -51,19 +40,9 @@ public class GlobalDataAccessServiceTest extends AbstractTestNGLogSupport {
 
 	@Mock
 	private AgentStatusDataProvider agentStatusProvider;
-
-	@Mock
-	UserDao userDao;
-
-	@Mock
-	PermissionDao permissionDao;
-
-	@Mock
-	RoleDao roleDao;
 	
 	@Mock
-	CmrSecurityManager securityManager;
-
+	private CmrSecurityManager securityManager;
 
 	/**
 	 * Initializes mocks. Has to run before each test so that mocks are clear.
@@ -76,23 +55,9 @@ public class GlobalDataAccessServiceTest extends AbstractTestNGLogSupport {
 		globalDataAccessService.platformIdentDao = platformIdentDao;
 		globalDataAccessService.agentStatusProvider = agentStatusProvider;
 		globalDataAccessService.defaultDataDao = defaultDataDao;
+		globalDataAccessService.securityManager = securityManager;
 		globalDataAccessService.log = LoggerFactory.getLogger(GlobalDataAccessService.class);
 				
-		Permission cmrDeleteAgentPermission = new Permission("cmrDeleteAgentPermission",
-				null);
-		permissionDao.saveOrUpdate(cmrDeleteAgentPermission);
-		Role adminRole = new Role("adminRole", Arrays.asList(cmrDeleteAgentPermission), null);
-		roleDao.saveOrUpdate(adminRole);
-		User admin = new User("admin", "admin", 1, false);
-		try {
-			admin = new User(Permutation.hashString("admin"), "admin", 1, false);
-		} catch (NoSuchAlgorithmException e) {
-			e.printStackTrace();
-		}
-		userDao.saveOrUpdate(admin);
-		Subject subject = SecurityUtils.getSubject();
-		UsernamePasswordToken token = new UsernamePasswordToken ("admin", "admin");
-		subject.login(token);
 	}
 
 	/**
@@ -102,10 +67,8 @@ public class GlobalDataAccessServiceTest extends AbstractTestNGLogSupport {
 	public void testNonExistingAgentDelete() throws BusinessException {
 		long platformId = 10L;
 		when(platformIdentDao.load(Long.valueOf(platformId))).thenReturn(null);
-		
-		Subject subject = new Subject.Builder().authenticated(true).buildSubject();
-		UsernamePasswordToken token = new UsernamePasswordToken ("admin", "admin");
-		subject.login(token);
+		when(securityManager.isPermitted(anyString())).thenReturn(true);
+
 		globalDataAccessService.deleteAgent(platformId);
 	}
 
@@ -118,15 +81,13 @@ public class GlobalDataAccessServiceTest extends AbstractTestNGLogSupport {
 		PlatformIdent platformIdent = new PlatformIdent();
 		platformIdent.setId(platformId);
 		when(platformIdentDao.load(Long.valueOf(platformId))).thenReturn(platformIdent);
+		when(securityManager.isPermitted(anyString())).thenReturn(true);
 
 		Map<Long, AgentStatusData> map = new HashMap<Long, AgentStatusData>(1);
 		AgentStatusData agentStatusData = new AgentStatusData(AgentConnection.CONNECTED);
 		map.put(platformId, agentStatusData);
 		when(agentStatusProvider.getAgentStatusDataMap()).thenReturn(map);
 
-		Subject subject = SecurityUtils.getSubject();
-		UsernamePasswordToken token = new UsernamePasswordToken ("admin", "admin");
-		subject.login(token);
 		globalDataAccessService.deleteAgent(platformId);
 	}
 
@@ -139,6 +100,7 @@ public class GlobalDataAccessServiceTest extends AbstractTestNGLogSupport {
 		PlatformIdent platformIdent = new PlatformIdent();
 		platformIdent.setId(platformId);
 		when(platformIdentDao.load(Long.valueOf(platformId))).thenReturn(platformIdent);
+		when(securityManager.isPermitted(anyString())).thenReturn(true);
 
 		Map<Long, AgentStatusData> map = new HashMap<Long, AgentStatusData>(1);
 		AgentStatusData agentStatusData = new AgentStatusData(AgentConnection.DISCONNECTED);
@@ -150,5 +112,18 @@ public class GlobalDataAccessServiceTest extends AbstractTestNGLogSupport {
 		verify(platformIdentDao, times(1)).delete(platformIdent);
 		verify(defaultDataDao, times(1)).deleteAll(platformId);
 		verify(agentStatusProvider, times(1)).registerDeleted(platformId);
+	}
+	/**
+	 * Check that if there is no permission to delete the agent nothing is done.
+	 * 
+	 */
+	@Test
+	public void noAgentDeletePermission() throws BusinessException {
+		long platformId = 10L;
+		when(securityManager.isPermitted(anyString())).thenReturn(false);
+		
+		globalDataAccessService.deleteAgent(platformId);
+		
+		verifyZeroInteractions(platformIdentDao, defaultDataDao, agentStatusProvider);
 	}
 }
