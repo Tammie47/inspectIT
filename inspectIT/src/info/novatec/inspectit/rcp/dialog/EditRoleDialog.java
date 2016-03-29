@@ -227,7 +227,7 @@ public class EditRoleDialog extends TitleAreaDialog {
 			boolean adminUsersLeft = false;
 			for (Role role : adminRoles) {
 				List<String> userList = cmrRepositoryDefinition.getSecurityService().getUsersByRole(role.getId());
-				if ((role.getId() != roleOld.getId()) && !userList.isEmpty()) {
+				if (!(role.getId().equals(roleOld.getId())) && !userList.isEmpty()) {
 					adminUsersLeft = true;
 				}
 			}
@@ -278,7 +278,7 @@ public class EditRoleDialog extends TitleAreaDialog {
 			boolean adminUsersLeft = false;
 			for (Role role : adminRoles) {
 				List<String> userList = cmrRepositoryDefinition.getSecurityService().getUsersByRole(role.getId());
-				if ((role.getId() != roleOld.getId()) && !userList.isEmpty()) {
+				if (!(role.getId().equals(roleOld.getId())) && !userList.isEmpty()) {
 					adminUsersLeft = true;
 				}
 			}
