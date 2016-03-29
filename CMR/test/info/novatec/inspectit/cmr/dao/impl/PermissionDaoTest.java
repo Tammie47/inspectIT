@@ -6,10 +6,9 @@ import static org.hamcrest.Matchers.greaterThan;
 import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.nullValue;
 
+import javax.persistence.PersistenceException;
 
-import org.hibernate.StaleStateException;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.orm.hibernate3.HibernateOptimisticLockingFailureException;
 import org.springframework.test.context.ContextConfiguration;
 import org.testng.annotations.Test;
 
@@ -26,7 +25,7 @@ public class PermissionDaoTest extends AbstractTransactionalTestNGLogSupport {
 	PermissionDao permissionDao;
 
 	/**
-	 * Tests that the saving and deleting the {@link Permission} works.
+	 * Tests that saving and deleting the {@link Permission} works.
 	 */
 	@Test
 	public void saveAndDeletePermission() {		
@@ -41,22 +40,21 @@ public class PermissionDaoTest extends AbstractTransactionalTestNGLogSupport {
 		assertThat(permissionDao.findByTitle(permission1.getTitle()), is(nullValue()));
 	}
 	/**
-	 * Trying to insert permissions with different ids but same titles should fail.
+	 * Trying to insert permissions with same titles should fail.
 	 */
-	@Test(expectedExceptions = {HibernateOptimisticLockingFailureException.class, StaleStateException.class})
+	@Test(expectedExceptions = {PersistenceException.class})
 	public void insertingNotUniquePermissions(){
 		Permission p1 = new Permission("Example", "A Example Permission");
-		Permission p2 = new Permission("Example", "A Example Permission");
+		Permission p2 = new Permission("Example", "Another Example Permission");
 		
-		p1.setId(50);
-		p2.setId(100);
-
 		permissionDao.saveOrUpdate(p1);
 		permissionDao.saveOrUpdate(p2);
+		
+		permissionDao.loadAll();
 	}
 	
 	/**
-	 * 
+	 * Tests that updating the {@link Permission} works.
 	 */
 	@Test	
 	public void updateTitleAndDescription(){
@@ -69,7 +67,7 @@ public class PermissionDaoTest extends AbstractTransactionalTestNGLogSupport {
 		permissionDao.saveOrUpdate(p1);
 		
 		Permission p2 = permissionDao.findById(p1.getId());
-
+		
 		assertThat(p2.getTitle(), is(equalTo("A new Title")));
 		assertThat(p2.getDescription(), is(equalTo("A new Description")));
 	}

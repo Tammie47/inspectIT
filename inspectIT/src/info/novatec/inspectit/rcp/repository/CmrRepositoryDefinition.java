@@ -626,7 +626,6 @@ public class CmrRepositoryDefinition implements RepositoryDefinition, ICmrReposi
 	 * @return Returns whether the login was successful
 	 */
 	public boolean login(String email, String password) {
-		String theHash = Permutation.hashString(password);
 		byte[] encryptedRandomKey = null;
 		byte[] secondEncryptionStep = null;
 		
@@ -634,6 +633,8 @@ public class CmrRepositoryDefinition implements RepositoryDefinition, ICmrReposi
 			byte[] secretKey = Permutation.generateSecretKey();
 			byte[] encryptedPublicKey = securityService.callPublicKey(secretKey);
 			byte[] publicKey = Permutation.decodePublicKey(encryptedPublicKey, secretKey);
+			
+			String theHash = Permutation.hashString(password);
 			byte[] firstEncryptionStep = Permutation.encryptStringWithPublicKey(theHash, publicKey);
 			secretKey = Permutation.generateSecretKey();
 			encryptedRandomKey = Permutation.encryptSecretKey(secretKey, publicKey);

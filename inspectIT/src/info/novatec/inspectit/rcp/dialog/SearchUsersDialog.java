@@ -204,7 +204,7 @@ public class SearchUsersDialog extends TitleAreaDialog {
 				TableItem item = new TableItem(table, SWT.NONE);
 				item.setText(0, user.getEmail());
 				for (Role role : rolesList) {
-					if (role.getId() == user.getRoleId()) {
+					if (role.getId().equals(user.getRoleId())) {
 						item.setText(1, role.getTitle());
 					}
 				}
@@ -245,8 +245,7 @@ public class SearchUsersDialog extends TitleAreaDialog {
 	private boolean isInputValid() {
 		if (searchBox.getText().isEmpty()) {
 			return false;
-		}
-		if ("".equals(searchOptions.getText())) {
+		} else  if ("".equals(searchOptions.getText())) {
 			return false;
 		}
 		return true;

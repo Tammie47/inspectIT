@@ -5,7 +5,6 @@ import java.util.List;
 import info.novatec.inspectit.communication.data.cmr.Permission;
 import info.novatec.inspectit.communication.data.cmr.Role;
 import info.novatec.inspectit.communication.data.cmr.User;
-import info.novatec.inspectit.util.PermutationException;
 
 /**
  * Provides general security operations for client<->cmr interaction.
@@ -23,9 +22,9 @@ public interface ISecurityService {
 	 * First Step of the modified login process.
 	 * @param secretKeyBytes symmetricKey
 	 * @return symmetrically encrypted public key
-	 * @throws PermutationException 
+	 * @throws Exception 
 	 */
-	byte[] callPublicKey(byte[] secretKeyBytes) throws PermutationException;
+	byte[] callPublicKey(byte[] secretKeyBytes) throws Exception;
 	
 	/**
 	 * Authentication via the CmrSecurityManager.
