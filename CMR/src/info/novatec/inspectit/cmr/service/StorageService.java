@@ -200,7 +200,6 @@ public class StorageService implements IStorageService, IUnsafeEntryForStorageSe
 		if (!securityManager.isAuthenticated()) {
 			return new ArrayList<StorageData>();
 		} else {
-			log.info("User: " + SecurityUtils.getSubject().getPrincipal());
 			return unsafeGetExistingStorages();
 		}
 	}
