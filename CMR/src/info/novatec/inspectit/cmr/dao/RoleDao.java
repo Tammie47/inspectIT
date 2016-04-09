@@ -15,18 +15,22 @@ public interface RoleDao {
 
 	/**
 	 * Find a Users Role.
-	 * @param id The ID of a role.
+	 * 
+	 * @param id
+	 *            The ID of a role.
 	 * @return The corresponding role.
 	 */
 	Role findByID(long id);
-	
+
 	/**
 	 * Searches for a role with the given title.
-	 * @param title The title
+	 * 
+	 * @param title
+	 *            The title
 	 * @return The role
 	 */
 	Role findByTitle(String title);
-	
+
 	/**
 	 * Saves or updates this {@link Role} in the underlying storage.
 	 * 
@@ -52,9 +56,10 @@ public interface RoleDao {
 	void deleteAll(List<Role> roles);
 
 	/**
-	 * Returns all {@link Role} objects which are saved in the underlying storage.
+	 * Returns all {@link Role} objects which are saved in the underlying
+	 * storage.
 	 * 
 	 * @return Returns all stored {@link Role} objects.
 	 */
-	List<Role> loadAll();	
+	List<Role> loadAll();
 }

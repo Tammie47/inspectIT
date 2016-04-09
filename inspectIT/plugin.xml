@@ -3058,7 +3058,7 @@
          </separator>
          <command
                commandId="info.novatec.inspectit.rcp.commands.cmrLogin"
-               icon="icons/selfmade/log_in_out.png"
+               icon="icons/fugue/key-solid.png"
                label="CMR Login"
                style="push">
           <visibleWhen
@@ -3090,7 +3090,7 @@
          </command>
          <command
                commandId="info.novatec.inspectit.rcp.commands.cmrLogout"
-               icon="icons/selfmade/log_in_out.png"
+               icon="icons/fugue/key-solid.png"
                label="CMR Logout"
                style="push">
             <visibleWhen
@@ -3122,7 +3122,7 @@
          </command>
          <command
                commandId="info.novatec.inspectit.rcp.commands.cmrAdministration"
-               icon="icons/selfmade/cmr_administration.png"
+               icon="icons/fugue/gear--pencil.png"
                label="CMR Administration"
                style="push">
                <visibleWhen

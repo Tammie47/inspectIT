@@ -1,6 +1,10 @@
 package info.novatec.inspectit.cmr.service;
 
+import java.security.KeyPair;
+import java.security.KeyPairGenerator;
+import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 
 import javax.annotation.PostConstruct;
@@ -8,6 +12,8 @@ import javax.annotation.PostConstruct;
 import org.apache.shiro.SecurityUtils;
 import org.apache.shiro.authc.AuthenticationException;
 import org.apache.shiro.authc.UsernamePasswordToken;
+import org.apache.shiro.session.Session;
+import org.apache.shiro.session.mgt.DefaultSessionManager;
 import org.apache.shiro.subject.Subject;
 import org.slf4j.Logger;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -34,6 +40,7 @@ import info.novatec.inspectit.spring.logger.Log;
  * @author Lucca Hellriegel
  * @author Mario Rose
  * @author Joshua Hartmann
+ * @author Phil Szalay
  */
 @Service
 public class SecurityService implements ISecurityService {
@@ -60,13 +67,18 @@ public class SecurityService implements ISecurityService {
 	 * Manager for general security purposes.
 	 */
 	@Autowired
-	CmrSecurityManager cmrSecurityManager;
+	CmrSecurityManager securityManager;
 
 	/**
 	 * Data Access Object.
 	 */
 	@Autowired
 	RoleDao roleDao;
+	
+	/**
+	 * KeyPair.
+	 */
+	private KeyPair keyPair;
 
 	/**
 	 * Is executed after dependency injection is done to perform any
@@ -74,6 +86,12 @@ public class SecurityService implements ISecurityService {
 	 */
 	@PostConstruct
 	public void postConstruct() {
+		try {
+			setKeyPair();
+		} catch (NoSuchAlgorithmException nsaEx) {
+			log.info(nsaEx.getMessage());
+		}
+		
 		if (log.isInfoEnabled()) {
 			log.info("|-Security Service active...");
 		}
@@ -84,21 +102,24 @@ public class SecurityService implements ISecurityService {
 	// +-------------------------------------------------------------------------------------------+
 
 	/**
-	 * Authentication via the CmrSecurityManager.
-	 * 
-	 * @param pw
-	 *            users password
-	 * @param email
-	 *            email
-	 * @return whether the login was successful
+	 * {@inheritDoc}
 	 */
 	@Override
-	public boolean authenticate(String pw, String email) {
+	public boolean authenticate(byte[] encryptedRandomKey, byte[] secondEncryptionLevel, String email) {
+		String pw;
+		try {
+			pw = Permutation.decryptPassword(encryptedRandomKey, secondEncryptionLevel, keyPair.getPrivate().getEncoded());
+		} catch (Exception e) {
+			log.info(e.getMessage());
+			return false;
+		}
+		
 		UsernamePasswordToken token = new UsernamePasswordToken(email, pw);
 
 		Subject currentUser = SecurityUtils.getSubject();
 
-		if (userDao.findByEmail(email).isLocked()) {
+		User user = userDao.findByEmail(email);
+		if (user == null || user.isLocked()) {
 			return false;
 		}
 
@@ -115,6 +136,29 @@ public class SecurityService implements ISecurityService {
 		}
 
 		return true;
+	}
+	
+	
+	/**
+	 * First Step of the modified login process.
+	 * @param symmetricKey secretKeyBytes 
+	 * @return symmetrically encrypted public key
+	 * @throws Exception Exception
+	 */
+	@Override
+	public byte[] callPublicKey(byte[] symmetricKey) throws Exception {
+		byte[] encryptedPublicKey = Permutation.encryptPublicKey(keyPair.getPublic(), symmetricKey);
+		return encryptedPublicKey;
+	}
+	
+	/**
+	 * Initializes the public/private keys.
+	 * @throws NoSuchAlgorithmException if RSA not available.
+	 */
+	private void setKeyPair() throws NoSuchAlgorithmException {
+		KeyPairGenerator generator = KeyPairGenerator.getInstance(Permutation.ASYMMETRIC_ALGORITHM);
+		generator.initialize(Permutation.ASYMMETRIC_KEY_SIZE);
+	    this.keyPair = generator.generateKeyPair();
 	}
 
 	/**
@@ -135,7 +179,7 @@ public class SecurityService implements ISecurityService {
 	}
 
 	/**
-	 * Returns titles of permissions as Strings.
+	 * Returns list of permissions.
 	 * 
 	 * @return List with the users permissions.
 	 */
@@ -184,6 +228,10 @@ public class SecurityService implements ISecurityService {
 	// | USER |---------------
 	@Override
 	public List<String> getAllUsers() {
+		if (!securityManager.isPermitted("cmrAdministrationPermission")) {
+			return new ArrayList<String>();
+		}
+		
 		List<User> users = userDao.loadAll();
 		List<String> userEmails = new ArrayList<String>();
 		for (User user : users) {
@@ -195,6 +243,10 @@ public class SecurityService implements ISecurityService {
 
 	@Override
 	public List<String> getUsersByRole(long id) {
+		if (!securityManager.isPermitted("cmrAdministrationPermission")) {
+			return new ArrayList<String>();
+		}
+		
 		List<User> foundUsers = userDao.findByRole(id);
 		List<String> userEmails = new ArrayList<String>();
 		for (User user : foundUsers) {
@@ -206,6 +258,10 @@ public class SecurityService implements ISecurityService {
 
 	@Override
 	public void addUser(User user) throws DataIntegrityViolationException {
+		if (!securityManager.isPermitted("cmrAdministrationPermission")) {
+			return;
+		}
+		
 		if (!checkDataIntegrity(user)) {
 			throw new DataIntegrityViolationException("Data integrity test failed!");
 		}
@@ -216,7 +272,13 @@ public class SecurityService implements ISecurityService {
 		} else if (existingRole == null) {
 			throw new DataIntegrityViolationException("Invalid role id assigned to this user!");
 		} else {
-			String hashedPassword = Permutation.hashString(user.getPassword());
+			String hashedPassword = "";
+			try {
+				hashedPassword = Permutation.hashString(user.getPassword());
+			} catch (NoSuchAlgorithmException e) {
+				log.info("NoSuchAlgorithException: Failed to create password hash. User not created!");
+				return;
+			}
 			user.setPassword(hashedPassword);
 			userDao.saveOrUpdate(user);
 		}
@@ -224,11 +286,19 @@ public class SecurityService implements ISecurityService {
 
 	@Override
 	public User getUser(String email) {
+		if (!securityManager.isPermitted("cmrAdministrationPermission")) {
+			return null;
+		}
+		
 		return userDao.findByEmail(email);
 	}
 
 	@Override
 	public void deleteUser(User user) {
+		if (!securityManager.isPermitted("cmrAdministrationPermission")) {
+			return;
+		}
+		
 		Subject currentUser = SecurityUtils.getSubject();
 		String currentName = (String) currentUser.getPrincipal();
 		if (currentName.equals(user.getEmail())) {
@@ -240,6 +310,10 @@ public class SecurityService implements ISecurityService {
 	@Override
 	public void changeUserAttribute(User userOld, String email, String password, long roleID, boolean passwordChanged,
 			boolean isLocked) {
+		if (!securityManager.isPermitted("cmrAdministrationPermission")) {
+			return;
+		}
+		
 		Subject currentUser = SecurityUtils.getSubject();
 		String currentName = (String) currentUser.getPrincipal();
 		if (currentName.equals(userOld.getEmail())) {
@@ -257,7 +331,13 @@ public class SecurityService implements ISecurityService {
 		userOld.setRoleId(roleID);
 		userOld.setLocked(isLocked);
 		if (passwordChanged) {
-			String hashedPassword = Permutation.hashString(password);
+			String hashedPassword = "";
+			try {
+				hashedPassword = Permutation.hashString(password);
+			} catch (NoSuchAlgorithmException e) {
+				log.info("NoSuchAlgorithException: Failed to create password hash. User attributes no changed!");
+				return;
+			}
 			userOld.setPassword(hashedPassword);
 		}
 		if (!checkDataIntegrity(userOld)) {
@@ -266,10 +346,23 @@ public class SecurityService implements ISecurityService {
 		userDao.saveOrUpdate(userOld);
 	}
 
+	@Override
+	public boolean checkCurrentUser(User user) {
+		Subject currentUser = SecurityUtils.getSubject();
+		String currentName = (String) currentUser.getPrincipal();
+		if (currentName.equals(user.getEmail())) {
+			return true;
+		}
+		return false;
+	}
 	// | PERMISSION |---------
 
 	@Override
 	public void changePermissionDescription(Permission permission) {
+		if (!securityManager.isPermitted("cmrAdministrationPermission")) {
+			return;
+		}
+		
 		changePermissionAttributes(permission, permission.getTitle(), permission.getDescription(),
 				permission.getParameter());
 	}
@@ -277,6 +370,10 @@ public class SecurityService implements ISecurityService {
 	@Override
 	public void changePermissionAttributes(Permission perm, String newTitle, String newDescription,
 			String newParamter) {
+		if (!securityManager.isPermitted("cmrAdministrationPermission")) {
+			return;
+		}
+		
 		perm.setTitle(newTitle);
 		perm.setDescription(newDescription);
 		perm.setParameter(newParamter);
@@ -286,12 +383,20 @@ public class SecurityService implements ISecurityService {
 
 	@Override
 	public List<Permission> getAllPermissions() {
+		if (!securityManager.isPermitted("cmrAdministrationPermission")) {
+			return new ArrayList<Permission>();
+		}
+		
 		return permissionDao.loadAll();
 	}
 
 	// | ROLE | --------------
 	@Override
 	public Role getRoleByID(long id) throws DataRetrievalFailureException, DataIntegrityViolationException {
+		if (!securityManager.isPermitted("cmrAdministrationPermission")) {
+			return null;
+		}
+		
 		Role roles = roleDao.findByID(id);
 
 		if (roles == null) {
@@ -303,6 +408,10 @@ public class SecurityService implements ISecurityService {
 
 	@Override
 	public Role getRoleOfUser(String email) throws AuthenticationException, DataIntegrityViolationException {
+		if (!securityManager.isPermitted("cmrAdministrationPermission")) {
+			return null;
+		}
+		
 		User foundUser = userDao.findByEmail(email);
 
 		if (foundUser == null) {
@@ -314,12 +423,20 @@ public class SecurityService implements ISecurityService {
 
 	@Override
 	public List<Role> getAllRoles() {
+		if (!securityManager.isPermitted("cmrAdministrationPermission")) {
+			return new ArrayList<Role>();
+		}
+		
 		return roleDao.loadAll();
 	}
 
 	@Override
 	public void addRole(String name, List<String> rolePermissions, String description)
 			throws DataIntegrityViolationException {
+		if (!securityManager.isPermitted("cmrAdministrationPermission")) {
+			return;
+		}
+		
 		List<Permission> allPermissions = getAllPermissions();
 		List<Permission> grantedPermissions = new ArrayList<Permission>();
 		for (int i = 0; i < rolePermissions.size(); i++) {
@@ -345,12 +462,20 @@ public class SecurityService implements ISecurityService {
 
 	@Override
 	public void changeRoleDescription(Role role, String newDescription) {
+		if (!securityManager.isPermitted("cmrAdministrationPermission")) {
+			return;
+		}
+		
 		changeRoleAttribute(role, role.getTitle(), newDescription, role.getPermissions());
 	}
 
 	@Override
 	public void changeRoleAttribute(Role role, String newTitle, String newDescription,
 			List<Permission> newPermissions) {
+		if (!securityManager.isPermitted("cmrAdministrationPermission")) {
+			return;
+		}
+		
 		role.setTitle(newTitle);
 		role.setDescription(newDescription);
 		role.setPermissions(newPermissions);
@@ -359,6 +484,104 @@ public class SecurityService implements ISecurityService {
 
 	@Override
 	public void deleteRole(Role role) {
+		if (!securityManager.isPermitted("cmrAdministrationPermission")) {
+			return;
+		}
+		
 		roleDao.delete(role);
+	}
+	
+	@Override
+	public boolean checkCurrentRole(Role role) {
+		Subject currentUser = SecurityUtils.getSubject();
+		String currentName = (String) currentUser.getPrincipal();
+		if (getRoleOfUser(currentName).getTitle().equals(role.getTitle())) {
+			return true;
+		}
+		return false;
+	}
+	@Override
+	public void resetDB() {
+		if (!securityManager.isPermitted("cmrAdministrationPermission")) {
+			return;
+		}
+
+		/**
+		 * All users logout.
+		 */
+		DefaultSessionManager sm = (DefaultSessionManager) securityManager.getSessionManager();
+
+		for (Session session : sm.getSessionDAO().getActiveSessions()) {
+			new Subject.Builder().session(session).buildSubject().logout();
+		}
+
+		userDao.deleteAll(userDao.loadAll());
+		roleDao.deleteAll(roleDao.loadAll());
+		permissionDao.deleteAll(permissionDao.loadAll());
+
+		/**
+		 * copied from info.novatec.inspectit.cmr.security.SecurityInitialization start()
+		 */
+		if (permissionDao.loadAll().isEmpty()) {
+
+			Permission cmrRecordingPermission = new Permission("cmrRecordingPermission",
+					"Permission to start recording from Agent");
+			Permission cmrShutdownAndRestartPermission = new Permission("cmrShutdownAndRestartPermission",
+					"Permission for shutting down and restarting the CMR");
+			Permission cmrDeleteAgentPermission = new Permission("cmrDeleteAgentPermission",
+					"Permission for deleting an Agent");
+			Permission cmrStoragePermission = new Permission("cmrStoragePermission",
+					"Permission for accessing basic storage options");
+			Permission cmrAdministrationPermission = new Permission("cmrAdministrationPermission",
+					"Permission for accessing the CMR Administration");
+			Permission cmrLookAtAgentsPermission = new Permission("cmrLookAtAgentsPermission",
+					"General permission to look at agents.");
+
+			// Transfers permissions to database.
+			permissionDao.saveOrUpdate(cmrRecordingPermission);
+			permissionDao.saveOrUpdate(cmrShutdownAndRestartPermission);
+			permissionDao.saveOrUpdate(cmrDeleteAgentPermission);
+			permissionDao.saveOrUpdate(cmrStoragePermission);
+			permissionDao.saveOrUpdate(cmrAdministrationPermission);
+			permissionDao.saveOrUpdate(cmrLookAtAgentsPermission);
+
+			// Predefined roles
+			Role guestRole = new Role("guestRole", new ArrayList<Permission>(), "The role of a guest-user.");
+			Role restrictedRole = new Role("restrictedRole",
+					Arrays.asList(cmrRecordingPermission, cmrStoragePermission, cmrLookAtAgentsPermission),
+					"The role of a restricted-user.");
+			Role adminRole = new Role("adminRole",
+					Arrays.asList(cmrRecordingPermission, cmrStoragePermission, cmrDeleteAgentPermission,
+							cmrShutdownAndRestartPermission, cmrAdministrationPermission, cmrLookAtAgentsPermission),
+					"The role of an admin-user.");
+
+			// Transfers roles to database.
+			roleDao.saveOrUpdate(guestRole);
+			roleDao.saveOrUpdate(restrictedRole);
+			roleDao.saveOrUpdate(adminRole);
+
+			// Standarduser - has to be changed on first login
+			User admin;
+			try {
+				admin = new User(Permutation.hashString("admin"), "admin", adminRole.getId(), false);
+			} catch (NoSuchAlgorithmException e) {
+				log.info("NoSuchAlgorithException: Failed to create password hash. User not added to database!");
+				return;
+			}
+
+			// Guestuser - can be edited to give a user without an account
+			// rights
+			User guest;
+			try {
+				guest = new User(Permutation.hashString("guest"), "guest", guestRole.getId(), false);
+			} catch (NoSuchAlgorithmException e) {
+				log.info("NoSuchAlgorithException: Failed to create password hash. User not added to database!");
+				return;
+			}
+
+			// Transfers users to databse.
+			userDao.saveOrUpdate(guest);
+			userDao.saveOrUpdate(admin);
+		}
 	}
 }

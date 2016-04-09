@@ -44,7 +44,6 @@ public class AddRoleDialog extends TitleAreaDialog {
 	 */
 	private Text roleNameBox;
 
-
 	/**
 	 * Role-description text box.
 	 */
@@ -127,14 +126,14 @@ public class AddRoleDialog extends TitleAreaDialog {
 		roleDescriptionBoxLabel.setText("Description:");
 		roleDescriptionBox = new Text(main, SWT.BORDER);
 		roleDescriptionBox.setLayoutData(new GridData(SWT.FILL, SWT.CENTER, true, false));
-		
+
 		Label textPermissionLabel = new Label(main, SWT.NONE);
 		textPermissionLabel.setLayoutData(new GridData(SWT.BEGINNING, SWT.CENTER, false, false, 2, 5));
 		textPermissionLabel.setText("Mark the permissions, that the new role should have:");
 		List<Permission> allPermissions = cmrRepositoryDefinition.getSecurityService().getAllPermissions();
 		for (int i = 0; i < allPermissions.size(); i++) {
 			this.allPermissionsStrings.add(allPermissions.get(i).getTitle());
-			}
+		}
 		this.allPermissionsButtons = new Button[allPermissionsStrings.size()];
 		for (int i = 0; i < allPermissionsStrings.size(); i++) {
 			allPermissionsButtons[i] = new Button(parent, SWT.CHECK);
@@ -153,7 +152,7 @@ public class AddRoleDialog extends TitleAreaDialog {
 		};
 
 		roleNameBox.addModifyListener(modifyListener);
-		
+
 		return main;
 	}
 
@@ -210,15 +209,16 @@ public class AddRoleDialog extends TitleAreaDialog {
 		}
 
 		if (!"".equals(similarRoles)) {
-			String warning = "One or more roles with the same set of permissions already exists." + "\n" + "\nDetected roles: " + similarRoles.substring(0, similarRoles.length() - 2) + "\n" 
+			String warning = "One or more roles with the same set of permissions already exists." + "\n"
+					+ "\nDetected roles: " + similarRoles.substring(0, similarRoles.length() - 2) + "\n"
 					+ "\nDo you really want to add the role \"" + name + "\"?";
 			Boolean confirm = MessageDialog.openConfirm(null, "Similar role already exists!", warning);
 			if (!confirm) {
 				return;
-					
+
 			}
 		}
-		
+
 		cmrRepositoryDefinition.getSecurityService().addRole(name, rolePermissions, roleDescriptionBox.getText());
 		okPressed();
 	}

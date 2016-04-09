@@ -14,14 +14,18 @@ import java.util.List;
 public interface UserDao {
 	/**
 	 * Get User by Email-Address.
-	 * @param email email
+	 * 
+	 * @param email
+	 *            email
 	 * @return a User object with matching Email-Address.
 	 */
 	User findByEmail(String email);
-	
+
 	/**
 	 * Get User by Role.
-	 * @param roleId roleId
+	 * 
+	 * @param roleId
+	 *            roleId
 	 * @return a User object with matching Role.
 	 */
 	List<User> findByRole(long roleId);
@@ -51,7 +55,8 @@ public interface UserDao {
 	void deleteAll(List<User> users);
 
 	/**
-	 * Returns all {@link User} objects which are saved in the underlying storage.
+	 * Returns all {@link User} objects which are saved in the underlying
+	 * storage.
 	 * 
 	 * @return Returns all stored {@link User} objects.
 	 */

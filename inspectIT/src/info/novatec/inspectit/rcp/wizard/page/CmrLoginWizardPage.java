@@ -1,6 +1,5 @@
 package info.novatec.inspectit.rcp.wizard.page;
 
-
 import org.eclipse.jface.wizard.WizardPage;
 import org.eclipse.swt.events.SelectionAdapter;
 import org.eclipse.swt.events.SelectionEvent;
@@ -44,6 +43,19 @@ public class CmrLoginWizardPage extends WizardPage {
 	public Text getPasswordBox() {
 		return passwordBox;
 	}
+
+	/**
+	 * Checkbox for staying logged in. 
+	 */
+	Button stayLoggedIn;
+	
+	/**
+	 * Check if users should stay logged in.
+	 * @return if users should stay logged in.
+	 */
+	public boolean shouldStayLoggedIn() {
+		return stayLoggedIn.getSelection();
+	}
 	
 	/**
 	 * Default constructor.
@@ -81,20 +93,23 @@ public class CmrLoginWizardPage extends WizardPage {
 			@Override
 			public void widgetSelected(SelectionEvent e) {
 				boolean selected = checkBox.getSelection();
-                if (selected) {
-                	mailBox.setText("guest");
-    				passwordBox.setText("guest");
-    				mailBox.setEditable(false);
-    				passwordBox.setEditable(false);
-                } else {
-                	mailBox.setText("");
-    				passwordBox.setText("");
-    				mailBox.setEditable(true);
-    				passwordBox.setEditable(true);
-                }
-               }
+				if (selected) {
+					mailBox.setText("guest");
+					passwordBox.setText("guest");
+					mailBox.setEditable(false);
+					passwordBox.setEditable(false);
+				} else {
+					mailBox.setText("");
+					passwordBox.setText("");
+					mailBox.setEditable(true);
+					passwordBox.setEditable(true);
+				}
+			}
 		});
-		
+
+		stayLoggedIn = new Button(main, SWT.CHECK);
+		stayLoggedIn.setText("Stay logged in?");
+
 		Listener pageModifyListener = new Listener() {
 
 			@Override
@@ -117,8 +132,7 @@ public class CmrLoginWizardPage extends WizardPage {
 	public boolean isPageComplete() {
 		if (mailBox.getText().isEmpty()) {
 			return false;
-		}
-		if (passwordBox.getText().isEmpty()) {
+		} else if (passwordBox.getText().isEmpty()) {
 			return false;
 		}
 
@@ -140,5 +154,5 @@ public class CmrLoginWizardPage extends WizardPage {
 
 		setMessage(DEFAULT_MESSAGE);
 	}
-	
+
 }

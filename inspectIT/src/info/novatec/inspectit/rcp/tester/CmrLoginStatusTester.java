@@ -1,7 +1,7 @@
 package info.novatec.inspectit.rcp.tester;
 
 import org.eclipse.core.expressions.PropertyTester;
-
+import info.novatec.inspectit.rcp.preferences.PreferencesUtils;
 import info.novatec.inspectit.rcp.provider.ICmrRepositoryAndAgentProvider;
 import info.novatec.inspectit.rcp.provider.ICmrRepositoryProvider;
 import info.novatec.inspectit.rcp.repository.CmrRepositoryDefinition;
@@ -29,15 +29,25 @@ public class CmrLoginStatusTester extends PropertyTester {
 		}
 
 		if ("cmrLoginStatus".equals(property)) {
+
 			cmrRepositoryDefinition.refreshLoginStatus();
 			LoginStatus loginStatus = cmrRepositoryDefinition.getLoginStatus();
 			if (null == loginStatus) {
 				return false;
 			}
+
 			if ("LOGGEDIN".equals(expectedValue)) {
 				return cmrRepositoryDefinition.getLoginStatus().equals(LoginStatus.LOGGEDIN);
 			} else if ("LOGGEDOUT".equals(expectedValue)) {
+
+				//Check for stored login data
+				String email = PreferencesUtils.getStringValue(cmrRepositoryDefinition.getIp() + ":" + cmrRepositoryDefinition.getPort() + "EMAIL");
+				String password = PreferencesUtils.getStringValue(cmrRepositoryDefinition.getIp() + ":" + cmrRepositoryDefinition.getPort() + "PW");
+				if (!"".equals(email)) {
+					cmrRepositoryDefinition.login(email, password);
+				}
 				return cmrRepositoryDefinition.getLoginStatus().equals(LoginStatus.LOGGEDOUT);
+
 			}
 		}
 

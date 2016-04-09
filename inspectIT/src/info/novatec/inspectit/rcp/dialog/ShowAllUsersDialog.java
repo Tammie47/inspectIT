@@ -46,12 +46,14 @@ public class ShowAllUsersDialog extends TitleAreaDialog {
 	 * {@link EditUserDialog}.
 	 */
 	private EditUserDialog editUserDialog;
+
 	/**
 	 * Default constructor.
+	 * 
 	 * @param parentShell
-	 * 				Parent {@link Shell} to create Dialog on
+	 *            Parent {@link Shell} to create Dialog on
 	 * @param cmrRepositoryDefinition
-	 * CmrRepositoryDefinition for easy access to security services.
+	 *            CmrRepositoryDefinition for easy access to security services.
 	 */
 	public ShowAllUsersDialog(Shell parentShell, CmrRepositoryDefinition cmrRepositoryDefinition) {
 		super(parentShell);
@@ -67,6 +69,7 @@ public class ShowAllUsersDialog extends TitleAreaDialog {
 		super.create();
 		this.setTitle("Show all Users");
 	}
+
 	/**
 	 * {@inheritDoc}
 	 */
@@ -100,19 +103,28 @@ public class ShowAllUsersDialog extends TitleAreaDialog {
 		updateTable();
 		table.addSelectionListener(new SelectionAdapter() {
 			public void widgetSelected(SelectionEvent e) {
+				boolean selfEditing = false;
 				if (table.getSelectionIndex() != -1) {
 					TableItem[] tableItems = table.getItems();
-					User user = cmrRepositoryDefinition.getSecurityService().getUser(tableItems[table.getSelectionIndex()].getText(0));
+					User user = cmrRepositoryDefinition.getSecurityService()
+							.getUser(tableItems[table.getSelectionIndex()].getText(0));
+					selfEditing = cmrRepositoryDefinition.getSecurityService().checkCurrentUser(user);
 					userDialog(main.getShell(), user);
-					users = cmrRepositoryDefinition.getSecurityService().getAllUsers();
-					updateTable();
+					if (!selfEditing) {
+						users = cmrRepositoryDefinition.getSecurityService().getAllUsers();
+						updateTable();
+					} else {
+						main.getShell().getParent().getShell().close();
+						okPressed();
+					}
+					
 				}
 			}
 		});
 		parent.pack();
 
 		return main;
-	}	
+	}
 
 	/**
 	 * Dialog in case a user is clicked in the table.
@@ -120,7 +132,7 @@ public class ShowAllUsersDialog extends TitleAreaDialog {
 	 * @param parentShell
 	 *            parent shell for the {@link EditUserDialog}
 	 * @param user
-	 * 		 	  the user to edit.
+	 *            the user to edit.
 	 */
 	private void userDialog(Shell parentShell, User user) {
 		editUserDialog = new EditUserDialog(parentShell, cmrRepositoryDefinition, user);
@@ -137,10 +149,10 @@ public class ShowAllUsersDialog extends TitleAreaDialog {
 			TableItem item = new TableItem(table, SWT.NONE);
 
 			String role = cmrRepositoryDefinition.getSecurityService().getRoleOfUser(users.get(i)).getTitle();
-			
+
 			item.setText(0, users.get(i));
-			item.setText(1, role);	
-			}
+			item.setText(1, role);
+		}
 		for (TableColumn column : table.getColumns()) {
 			column.pack();
 		}

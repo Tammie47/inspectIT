@@ -1,5 +1,6 @@
 package info.novatec.inspectit.rcp.dialog;
 
+import org.eclipse.jface.dialogs.MessageDialog;
 import org.eclipse.jface.dialogs.TitleAreaDialog;
 import org.eclipse.swt.SWT;
 import org.eclipse.swt.events.SelectionAdapter;
@@ -17,6 +18,7 @@ import info.novatec.inspectit.rcp.repository.CmrRepositoryDefinition;
  * 
  * @author Lucca Hellriegel
  * @author Thomas Sachs
+ * @author Phil Szalay
  */
 public class CmrAdministrationDialog extends TitleAreaDialog {
 	/**
@@ -52,17 +54,17 @@ public class CmrAdministrationDialog extends TitleAreaDialog {
 	 * The dialog to add new users.
 	 */
 	private AddUserDialog addUserDialog;
-	
+
 	/**
 	 * The dialog to show permissions.
 	 */
 	private ShowEditablePermissionsDialog showEditablePermissionsDialog;
-	
+
 	/**
 	 * Finish Dialog button.
 	 */
 	private Button closeButton;
-	
+
 	/**
 	 * Finish button id.
 	 */
@@ -74,13 +76,13 @@ public class CmrAdministrationDialog extends TitleAreaDialog {
 	 * @param cmrRepositoryDefinition
 	 *            the CmrRepositoryDefinition
 	 * @param parentShell
-	 * 			the parent shell
+	 *            the parent shell
 	 */
 	public CmrAdministrationDialog(Shell parentShell, CmrRepositoryDefinition cmrRepositoryDefinition) {
 		super(parentShell);
 		this.cmrRepositoryDefinition = cmrRepositoryDefinition;
 	}
-	
+
 	/**
 	 * {@inheritDoc}
 	 */
@@ -90,7 +92,7 @@ public class CmrAdministrationDialog extends TitleAreaDialog {
 		this.setTitle("CMR Administration");
 		this.setMessage(DEFAULT_MESSAGE);
 	}
-	
+
 	/**
 	 * {@inheritDoc}
 	 */
@@ -113,7 +115,7 @@ public class CmrAdministrationDialog extends TitleAreaDialog {
 				addUserDialog.open();
 			}
 		});
-		
+
 		Button showUsers = new Button(main, SWT.CENTER);
 		showUsers.setLayoutData(new GridData(SWT.BEGINNING, SWT.CENTER, false, false));
 		showUsers.setText("Show All Users");
@@ -147,7 +149,7 @@ public class CmrAdministrationDialog extends TitleAreaDialog {
 				addRoleDialog.open();
 			}
 		});
-		
+
 		Button showRoles = new Button(main, SWT.CENTER);
 		showRoles.setLayoutData(new GridData(SWT.BEGINNING, SWT.CENTER, false, false));
 		showRoles.setText("Show All Roles");
@@ -165,23 +167,47 @@ public class CmrAdministrationDialog extends TitleAreaDialog {
 		editPermissions.addSelectionListener(new SelectionAdapter() {
 			@Override
 			public void widgetSelected(SelectionEvent e) {
-				showEditablePermissionsDialog = new ShowEditablePermissionsDialog(main.getShell(), cmrRepositoryDefinition);
+				showEditablePermissionsDialog = new ShowEditablePermissionsDialog(main.getShell(),
+						cmrRepositoryDefinition);
 				showEditablePermissionsDialog.open();
 			}
 		});
-		
+
+		Button resetDatabase = new Button(main, SWT.CENTER);
+		resetDatabase.setLayoutData(new GridData(SWT.BEGINNING, SWT.CENTER, false, false));
+		resetDatabase.setText("Reset Database");
+		resetDatabase.addSelectionListener(new SelectionAdapter() {
+			@Override
+			public void widgetSelected(SelectionEvent e) {
+				Boolean confirm = MessageDialog.openConfirm(null, "Database reset",
+						"Do you really want to reset the datbase? All users will be logged out and all custom roles, permissions and users will be deleted.");
+				if (!confirm) {
+					return;
+				} else {
+					cmrRepositoryDefinition.getSecurityService().resetDB();
+
+					MessageDialog.openInformation(null, "Information", "Database reset successful!");
+					cancelPressed();
+					cmrRepositoryDefinition.refreshLoginStatus();
+
+				}
+			}
+		});
+
 		return main;
 	}
+
 	/**
-	 * Buttons for the button bar. 
+	 * Buttons for the button bar.
+	 * 
 	 * @param parent
-	 * 			Parent in which to create the buttons.
+	 *            Parent in which to create the buttons.
 	 */
 	protected void createButtonsForButtonBar(Composite parent) {
 		closeButton = createButton(parent, CLOSE_ID, "Close", true);
 		closeButton.setEnabled(true);
 	}
-	
+
 	/**
 	 * {@inheritDoc}
 	 */

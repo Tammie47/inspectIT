@@ -15,7 +15,9 @@ import info.novatec.inspectit.cmr.service.IStorageService;
 import info.novatec.inspectit.cmr.service.ITimerDataAccessService;
 import info.novatec.inspectit.cmr.service.cache.CachedDataService;
 import info.novatec.inspectit.communication.data.cmr.Permission;
+import info.novatec.inspectit.communication.data.cmr.Permutation;
 import info.novatec.inspectit.rcp.InspectIT;
+import info.novatec.inspectit.rcp.preferences.PreferencesUtils;
 import info.novatec.inspectit.rcp.provider.ICmrRepositoryProvider;
 import info.novatec.inspectit.rcp.repository.service.RefreshEditorsCachedDataService;
 import info.novatec.inspectit.rcp.repository.service.cmr.CmrServiceProvider;
@@ -33,6 +35,7 @@ import java.util.Objects;
  * @author Eduard Tudenhoefner
  * @author Matthias Huber
  * @author Alfred Krauss
+ * @author Andreas Herzog
  * 
  */
 public class CmrRepositoryDefinition implements RepositoryDefinition, ICmrRepositoryProvider {
@@ -614,6 +617,8 @@ public class CmrRepositoryDefinition implements RepositoryDefinition, ICmrReposi
 	/**
 	 * Method to login on the CMR.
 	 * 
+	 * @author Andreas Herzog
+	 * 
 	 * @param email
 	 *            The users email
 	 * @param password
@@ -621,7 +626,23 @@ public class CmrRepositoryDefinition implements RepositoryDefinition, ICmrReposi
 	 * @return Returns whether the login was successful
 	 */
 	public boolean login(String email, String password) {
-		boolean authenticated = securityService.authenticate(password, email);
+		byte[] encryptedRandomKey = null;
+		byte[] secondEncryptionStep = null;
+		
+		try {
+			byte[] secretKey = Permutation.generateSecretKey();
+			byte[] encryptedPublicKey = securityService.callPublicKey(secretKey);
+			byte[] publicKey = Permutation.decodePublicKey(encryptedPublicKey, secretKey);
+			
+			String theHash = Permutation.hashString(password);
+			byte[] firstEncryptionStep = Permutation.encryptStringWithPublicKey(theHash, publicKey);
+			secretKey = Permutation.generateSecretKey();
+			encryptedRandomKey = Permutation.encryptSecretKey(secretKey, publicKey);
+			secondEncryptionStep = Permutation.encryptWithSecretKey(firstEncryptionStep, secretKey);
+		} catch (Exception e) {
+			return false;
+		}
+		boolean authenticated = securityService.authenticate(encryptedRandomKey, secondEncryptionStep, email);
 		refreshLoginStatus();
 		return authenticated;
 	}
@@ -700,4 +721,19 @@ public class CmrRepositoryDefinition implements RepositoryDefinition, ICmrReposi
 		}
 		return false; 
 	}
+
+	/**
+	 * Saves password and email to preferenceStore to make user able to stay
+	 * logged in.
+	 * 
+	 * @param email
+	 *            Email of user.
+	 * @param pw
+	 *            Password of user.
+	 */
+	public void stayLoggedIn(String email, String pw) {
+		PreferencesUtils.saveStringValue(this.ip + ":" + this.port + "EMAIL", email, false);
+		PreferencesUtils.saveStringValue(this.ip + ":" + this.port + "PW", pw, false);
+	}
+			
 }

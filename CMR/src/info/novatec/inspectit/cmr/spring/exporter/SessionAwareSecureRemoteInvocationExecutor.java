@@ -18,7 +18,7 @@ import org.springframework.stereotype.Component;
 /**
  * This class is taken and modified from <a href="https://shiro.apache.org/static/1.2.4/shiro-spring/cobertura/org.apache.shiro.spring.remoting.SecureRemoteInvocationExecutor.html" />
  * to handle the session id manually.
- * The originally class is under the Apache 2 licence.
+ * The originally class is under the Apache 2 license.
  * 
  * The authors who modified it are
  * @author Ivan Senic
@@ -83,16 +83,16 @@ public class SessionAwareSecureRemoteInvocationExecutor extends	DefaultRemoteInv
 		} catch (ExecutionException e) {
 			Throwable cause = e.getCause();
 			if ((cause instanceof NoSuchMethodException)) {
-				throw ((NoSuchMethodException) cause);
+				throw ((NoSuchMethodException) cause); // NOPMD
 			}
 			if ((cause instanceof IllegalAccessException)) {
-				throw ((IllegalAccessException) cause);
+				throw ((IllegalAccessException) cause); // NOPMD
 			}
 			if ((cause instanceof InvocationTargetException)) {
-				throw ((InvocationTargetException) cause);
+				throw ((InvocationTargetException) cause); // NOPMD
 			}
-			throw new InvocationTargetException(cause);
-		} catch (Throwable t) {
+			throw new InvocationTargetException(cause); // NOPMD
+		} catch (Throwable t) { // NOPMD
 			throw new InvocationTargetException(t);
 		}
 	}

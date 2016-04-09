@@ -2,6 +2,7 @@ package info.novatec.inspectit.cmr.dao.impl;
 
 import java.util.List;
 
+import javax.persistence.EntityManager;
 import javax.persistence.TypedQuery;
 
 import org.springframework.stereotype.Repository;
@@ -16,6 +17,7 @@ import info.novatec.inspectit.communication.data.cmr.User;
  * 
  * @author Joshua Hartmann
  * @author Andreas Herzog
+ * @author Lucca Hellriegel
  * 
  */
 @Repository
@@ -31,14 +33,17 @@ public class UserDaoImpl extends AbstractJpaDao<User>implements UserDao {
 	 * {@inheritDoc}
 	 */
 	@Override
+	@Transactional
 	public void delete(User user) {
-		super.delete(user);
+		EntityManager em = getEntityManager();		
+		em.remove(em.merge(user));
 	}
 
 	/**
 	 * {@inheritDoc}
 	 */
 	@Override
+	@Transactional
 	public void deleteAll(List<User> users) {
 		for (User user : users) {
 			delete(user);
